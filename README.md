@@ -15,20 +15,31 @@ A modern, cloud-native portfolio website built to demonstrate DevOps engineering
 block-beta
 columns 3
 
-block:dev["Development & CI/CD"]:3
+block:dev:3
+    columns 5
+    space
+    space
+    devTitle("🔧 Development & CI/CD")
+    space
     space
     A["GitHub Repository<br/>(Source Code)"]
     space
     B["GitHub Actions<br/>(CI/CD Pipeline)"]  
     space
     C["Terraform Cloud<br/>(State Management)"]
-    space
 end
 
 space:3
 
-block:aws["AWS Cloud Infrastructure"]:3
+block:aws:3
     columns 7
+    space
+    space
+    space
+    awsTitle("☁️ AWS Cloud Infrastructure")
+    space
+    space
+    space
     F["S3 Bucket<br/>(Static Website Hosting)"]
     space
     space
@@ -52,7 +63,13 @@ end
 
 space:3
 
-block:external["External"]:3
+block:external:3
+    columns 5
+    space
+    space
+    extTitle("🌐 External")
+    space
+    space
     space
     J["fitzs.io<br/>(Custom Domain)"]
     space
@@ -93,6 +110,8 @@ classDef external fill:#06b6d4,stroke:#0891b2,stroke-width:2px,color:#ffffff
 class D,E,F,G,H,I aws
 class A,B,C github
 class J,K external
+class devTitle,awsTitle,extTitle BT
+classDef BT stroke:transparent,fill:transparent
 
 %% Add padding to blocks for better arrow spacing
 style A padding:10px
