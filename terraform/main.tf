@@ -104,6 +104,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "portfolio_website" {
     id     = "lifecycle_rule"
     status = "Enabled"
 
+    filter {
+      prefix = ""  # Apply to all objects
+    }
+
     noncurrent_version_expiration {
       noncurrent_days = var.s3_lifecycle_rules.noncurrent_version_expiration
     }
