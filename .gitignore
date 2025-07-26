@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Environment variables
+.env*
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# IDE and OS
+.vscode/
+.DS_Store 
