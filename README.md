@@ -152,35 +152,6 @@ style K padding:10px
 - **Linting**: ESLint, Prettier
 - **Security Scanning**: CodeQL, npm audit
 
-## 📁 Project Structure
-
-```
-portfolio/
-├── .github/
-│   ├── workflows/           # GitHub Actions CI/CD pipelines
-│   │   ├── pr.yml          # Pull request validation
-│   │   ├── deploy-staging.yml
-│   │   └── deploy-prod.yml
-│   └── ISSUE_TEMPLATE/     # Issue templates
-├── terraform/
-│   ├── environments/       # Environment-specific configurations
-│   │   ├── dev/
-│   │   ├── staging/
-│   │   └── prod/
-│   ├── modules/            # Reusable Terraform modules
-│   │   ├── s3-website/
-│   │   ├── cloudfront/
-│   │   ├── route53/
-│   │   └── waf/
-│   └── shared/             # Shared variables and locals
-├── src/                    # Website source code
-├── dist/                   # Built website assets
-├── docs/                   # Additional documentation
-├── scripts/               # Deployment and utility scripts
-├── INFRASTRUCTURE_PLAN.md # Detailed infrastructure documentation
-└── README.md              # This file
-```
-
 ## 🛠️ Getting Started
 
 ### Prerequisites
