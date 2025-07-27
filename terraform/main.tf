@@ -209,11 +209,21 @@ resource "aws_cloudfront_distribution" "portfolio_website" {
     Name = "Portfolio Website Distribution"
   }
 
-  viewer_certificate {
-    cloudfront_default_certificate = var.domain_name == "" ? true : false
-    acm_certificate_arn           = var.domain_name != "" ? aws_acm_certificate.portfolio_cert[0].arn : null
-    ssl_support_method            = var.domain_name != "" ? "sni-only" : null
-    minimum_protocol_version      = var.domain_name != "" ? "TLSv1.2_2021" : null
+  # Conditional viewer certificate configuration
+  dynamic "viewer_certificate" {
+    for_each = var.domain_name == "" ? [1] : []
+    content {
+      cloudfront_default_certificate = true
+    }
+  }
+
+  dynamic "viewer_certificate" {
+    for_each = var.domain_name != "" ? [1] : []
+    content {
+      acm_certificate_arn      = aws_acm_certificate.portfolio_cert[0].arn
+      ssl_support_method       = "sni-only"
+      minimum_protocol_version = "TLSv1.2_2021"
+    }
   }
 }
 
