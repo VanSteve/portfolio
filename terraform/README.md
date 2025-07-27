@@ -105,7 +105,7 @@ After successful deployment, the following outputs will be available:
 
 - `website_url`: Complete website URL
 - `cloudfront_distribution_id`: CloudFront distribution ID
-- `website_bucket_name`: S3 bucket name
+- `website_bucket_name`: S3 bucket base name (region automatically appended)
 - `route53_name_servers`: DNS name servers (if using custom domain)
 
 ## 🔄 CI/CD Integration
@@ -120,7 +120,7 @@ The Terraform Cloud workspace integrates with GitHub Actions for:
 ### Common Issues
 
 1. **Bucket name already exists**:
-   - Change `website_bucket_name` to a unique value
+   - Change `website_bucket_name` base value if needed (region suffix ensures uniqueness)
    - S3 bucket names must be globally unique
 
 2. **AWS credentials error**:

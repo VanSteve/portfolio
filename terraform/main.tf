@@ -42,7 +42,7 @@ provider "aws" {
 
 # S3 Bucket for Static Website Hosting
 resource "aws_s3_bucket" "portfolio_website" {
-  bucket = var.website_bucket_name
+  bucket = "${var.website_bucket_name}-${var.aws_region}"
 }
 
 # S3 Bucket Public Access Block
@@ -123,7 +123,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "portfolio_website" {
 # S3 Bucket for CloudFront Logs (only if logging enabled)
 resource "aws_s3_bucket" "cloudfront_logs" {
   count  = var.enable_cloudfront_logging ? 1 : 0
-  bucket = "${var.website_bucket_name}-cloudfront-logs"
+  bucket = "${var.website_bucket_name}-${var.aws_region}-cloudfront-logs"
 }
 
 resource "aws_s3_bucket_ownership_controls" "cloudfront_logs" {
