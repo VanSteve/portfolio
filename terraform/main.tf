@@ -56,9 +56,16 @@ resource "aws_s3_bucket_public_access_block" "portfolio_website" {
 }
 
 # S3 Bucket Policy for Public Read Access
+# Note: Must wait for public access block to be configured first
 resource "aws_s3_bucket_policy" "portfolio_website" {
   bucket = aws_s3_bucket.portfolio_website.id
-  depends_on = [aws_s3_bucket_public_access_block.portfolio_website]
+  
+  # Explicit dependency to ensure public access block is configured first
+  depends_on = [
+    aws_s3_bucket_public_access_block.portfolio_website,
+    aws_s3_bucket_website_configuration.portfolio_website,
+    time_sleep.wait_for_bucket_settings
+  ]
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -85,6 +92,16 @@ resource "aws_s3_bucket_website_configuration" "portfolio_website" {
   error_document {
     key = "404.html"
   }
+}
+
+# Wait for S3 bucket settings to propagate
+resource "time_sleep" "wait_for_bucket_settings" {
+  depends_on = [
+    aws_s3_bucket_public_access_block.portfolio_website,
+    aws_s3_bucket_website_configuration.portfolio_website
+  ]
+  
+  create_duration = "10s"
 }
 
 # S3 Bucket Versioning
