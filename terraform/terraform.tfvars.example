@@ -1,0 +1,33 @@
+# Portfolio Infrastructure - Example Variables
+# Copy this file to terraform.tfvars and update values for your deployment
+# These variables will be configured in Terraform Cloud workspace
+
+# AWS Configuration
+aws_region = "us-west-2"
+environment = "prod"
+
+# Website Configuration
+website_bucket_name = "vansteve-portfolio-website"
+domain_name = ""  # Leave empty to use CloudFront domain, or set to your custom domain like "fitzs.io"
+
+# Project Configuration
+project_name = "portfolio"
+owner = "VanSteve"
+
+# Optional Features
+enable_cloudfront_logging = false
+cloudfront_price_class = "PriceClass_100"
+enable_s3_versioning = true
+
+# S3 Lifecycle Configuration
+s3_lifecycle_rules = {
+  enabled                       = true
+  noncurrent_version_expiration = 90
+  delete_markers_expiration     = true
+}
+
+# Additional Tags
+tags = {
+  CostCenter = "Personal"
+  Repository = "VanSteve/portfolio"
+} 
