@@ -24,12 +24,12 @@ variable "environment" {
 }
 
 variable "website_bucket_name" {
-  description = "Name of the S3 bucket for website hosting"
+  description = "Base name of the S3 bucket for website hosting (region will be appended automatically)"
   type        = string
   
   validation {
-    condition = can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.website_bucket_name)) && length(var.website_bucket_name) >= 3 && length(var.website_bucket_name) <= 63
-    error_message = "S3 bucket name must be 3-63 characters, lowercase letters, numbers, and hyphens only."
+    condition = can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.website_bucket_name)) && length(var.website_bucket_name) >= 3 && length(var.website_bucket_name) <= 45
+    error_message = "S3 bucket base name must be 3-45 characters, lowercase letters, numbers, and hyphens only (region suffix will be added)."
   }
 }
 
