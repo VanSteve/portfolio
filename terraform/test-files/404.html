@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found | Portfolio</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            text-align: center;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .error-code {
+            font-size: 6rem;
+            font-weight: bold;
+            color: #667eea;
+            margin: 0;
+            line-height: 1;
+        }
+        .error-message {
+            font-size: 1.5rem;
+            margin: 20px 0;
+            color: #555;
+        }
+        .description {
+            color: #777;
+            margin: 20px 0;
+        }
+        .home-link {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            margin-top: 20px;
+            transition: background 0.3s ease;
+        }
+        .home-link:hover {
+            background: #5a6fd8;
+        }
+        .infrastructure-info {
+            background: #f8f9ff;
+            border: 1px solid #e1e5ff;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 30px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="error-code">404</h1>
+        <h2 class="error-message">Page Not Found</h2>
+        <p class="description">
+            The page you're looking for doesn't exist or has been moved.
+        </p>
+        <a href="/" class="home-link">← Back to Home</a>
+        
+        <div class="infrastructure-info">
+            <strong>🏗️ Infrastructure Test:</strong> This 404 page is served by CloudFront from S3, demonstrating proper error handling configuration.
+        </div>
+    </div>
+</body>
+</html> 
