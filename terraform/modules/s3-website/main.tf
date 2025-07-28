@@ -6,7 +6,7 @@ resource "aws_s3_bucket" "website" {
   bucket = var.bucket_name
 }
 
-# S3 Bucket Public Access Block
+# Configure S3 Bucket to Allow Public Access
 resource "aws_s3_bucket_public_access_block" "website" {
   bucket = aws_s3_bucket.website.id
 
