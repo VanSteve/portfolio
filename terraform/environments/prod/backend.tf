@@ -1,5 +1,5 @@
-# Portfolio Infrastructure - Terraform Configuration
-# This file specifies Terraform version, provider requirements, and backend configuration
+# Portfolio Infrastructure - Production Environment Backend
+# Terraform Cloud backend configuration for the production environment
 
 terraform {
   cloud {
@@ -17,7 +17,6 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    
     time = {
       source  = "hashicorp/time"
       version = "~> 0.9"
