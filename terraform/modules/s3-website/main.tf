@@ -16,7 +16,7 @@ resource "aws_s3_bucket_public_access_block" "website" {
   restrict_public_buckets = false
 }
 
-# S3 Bucket Website Configuration
+# Configure S3 Bucket for Static Website Hosting (index and error pages)
 resource "aws_s3_bucket_website_configuration" "website" {
   bucket = aws_s3_bucket.website.id
 
@@ -29,7 +29,7 @@ resource "aws_s3_bucket_website_configuration" "website" {
   }
 }
 
-# Wait for S3 bucket settings to propagate
+# Wait for S3 bucket settings to propagate (prevents race conditions)
 resource "time_sleep" "wait_for_bucket_settings" {
   depends_on = [
     aws_s3_bucket_public_access_block.website,
@@ -64,7 +64,7 @@ resource "aws_s3_bucket_policy" "website" {
   })
 }
 
-# S3 Bucket Versioning
+# S3 Bucket Versioning (enables rollback capabilities for website content)
 resource "aws_s3_bucket_versioning" "website" {
   bucket = aws_s3_bucket.website.id
   versioning_configuration {
@@ -72,7 +72,7 @@ resource "aws_s3_bucket_versioning" "website" {
   }
 }
 
-# S3 Bucket Lifecycle Configuration
+# S3 Bucket Lifecycle Configuration (manages old versions and storage costs)
 resource "aws_s3_bucket_lifecycle_configuration" "website" {
   count  = var.lifecycle_rules.enabled ? 1 : 0
   bucket = aws_s3_bucket.website.id
