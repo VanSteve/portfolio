@@ -1,7 +1,15 @@
 # Portfolio Infrastructure - Terraform Configuration
-# This file specifies Terraform version and provider requirements
+# This file specifies Terraform version, provider requirements, and backend configuration
 
 terraform {
+  cloud {
+    organization = "vansteve-portfolio"
+    
+    workspaces {
+      name = "portfolio-infrastructure-prod"
+    }
+  }
+  
   required_version = ">= 1.0"
   
   required_providers {

@@ -1,6 +1,6 @@
 # Portfolio Infrastructure
 
-This directory contains the Terraform configuration for the portfolio website infrastructure, managed through Terraform Cloud with automated deployments via GitHub Actions.
+This directory contains the Terraform configuration for the portfolio website infrastructure, organized using a modular approach with environment-specific configurations managed through Terraform Cloud.
 
 ## 🏗️ Architecture Overview
 
@@ -10,128 +10,139 @@ The infrastructure provides:
 - **ACM Certificate**: SSL/TLS certificate for custom domains (optional)
 - **Route53**: DNS management for custom domains (optional)
 
-## 🌍 Domain Configuration
+## 🌍 Environment Management
 
-### Current Setup
-The infrastructure supports both CloudFront-only and custom domain deployments:
+### Production Environment (`environments/prod/`)
+- **Workspace**: `portfolio-infrastructure-prod`
+- **Purpose**: Live production website
+- **Configuration**: Production-optimized settings
+- **Domain**: Production domain with SSL certificate
+- **Logging**: Enabled for monitoring
+- **Retention**: 90-day S3 version retention
 
-**Without Custom Domain:**
-- Accessible via CloudFront distribution domain
-- Format: `https://d123456789abcdef.cloudfront.net`
+### Staging Environment (`environments/staging/`)
+- **Workspace**: `portfolio-infrastructure-staging`
+- **Purpose**: Pre-production testing and validation
+- **Configuration**: Production-like with cost optimizations
+- **Domain**: Staging subdomain (optional)
+- **Logging**: Enabled for testing
+- **Retention**: 30-day S3 version retention
 
-**With Custom Domain:**
-- Set `domain_name` variable in Terraform Cloud workspace
-- Route53 automatically manages DNS records
-- ACM certificate handles SSL/TLS with automatic validation
+### Development Environment (`environments/dev/`)
+- **Workspace**: `portfolio-infrastructure-dev`
+- **Purpose**: Development and experimentation
+- **Configuration**: Cost-optimized for development
+- **Domain**: CloudFront URL (no custom domain)
+- **Logging**: Disabled to reduce costs
+- **Retention**: 7-day S3 version retention
 
-### DNS Management
-When using a custom domain:
-1. Terraform creates Route53 hosted zone
-2. Certificate validation occurs automatically via DNS
-3. Update domain registrar to use Route53 name servers (found in outputs)
-4. DNS propagation typically completes within 24-48 hours
+## 🚀 Deployment Workflow
 
-## 🔄 Deployment & Operations
+### 1. Development
+```bash
+cd terraform/environments/dev
+terraform init
+terraform plan
+terraform apply
+```
 
-### Terraform Cloud Workspace
-All deployments are managed through Terraform Cloud:
-- **Plans**: Automatically triggered on pull requests
-- **Applies**: Automatically executed on main branch merges
-- **State**: Securely stored and managed in Terraform Cloud
-- **Variables**: Configured in workspace settings
+### 2. Staging
+```bash
+cd terraform/environments/staging
+terraform init
+terraform plan
+terraform apply
+```
 
-### Environment Management
-- Production environment uses the root configuration
-- Development/staging environments available in `environments/` (future expansion)
-- Environment-specific variables managed through Terraform Cloud workspaces
+### 3. Production
+```bash
+cd terraform/environments/prod
+terraform init
+terraform plan
+terraform apply
+```
 
-### Monitoring Deployment Status
-Monitor deployments through:
-- GitHub Actions workflow status
-- Terraform Cloud run history
-- AWS CloudFormation events (for infrastructure changes)
+## 🔧 Module Development
 
-## 📊 Infrastructure Outputs
+### Testing Modules Locally
+```bash
+# Test S3 website module
+cd terraform/modules/s3-website
+terraform init -backend=false
+terraform validate
 
-After deployment, these outputs are available in Terraform Cloud:
+# Test CloudFront module
+cd terraform/modules/cloudfront
+terraform init -backend=false
+terraform validate
+```
 
-| Output | Description |
-|--------|-------------|
-| `website_url` | Complete website URL (CloudFront or custom domain) |
-| `cloudfront_distribution_id` | CloudFront distribution ID for cache management |
-| `website_bucket_name` | S3 bucket name for content uploads |
-| `route53_name_servers` | DNS name servers (custom domain only) |
+### Adding New Environments
+1. Copy an existing environment directory
+2. Update `backend.tf` with new workspace name
+3. Modify `variables.tf` defaults for the environment
+4. Customize `terraform.tfvars` with appropriate settings
+5. Update `README.md` with environment-specific information
+
+## 📊 Terraform Cloud Workspaces
+
+All environments are managed through separate Terraform Cloud workspaces:
+
+| Environment | Workspace Name | Directory |
+|-------------|----------------|-----------|
+| Production | `portfolio-infrastructure-prod` | `terraform/environments/prod/` |
+| Staging | `portfolio-infrastructure-staging` | `terraform/environments/staging/` |
+| Development | `portfolio-infrastructure-dev` | `terraform/environments/dev/` |
+
+### Workspace Configuration
+Each workspace requires:
+- AWS credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
+- Working directory set to the appropriate environment path
+- Environment-specific variable overrides as needed
 
 ## 🔐 Security & Best Practices
 
-### Access Controls
-- S3 bucket uses Origin Access Control (OAC) with CloudFront
-- IAM policies follow least privilege principles
-- All resources use encryption at rest
+### Module Design
+- **Reusable**: Modules can be used across all environments
+- **Configurable**: Environment-specific parameters via variables
+- **Validated**: Input validation for all critical parameters
+- **Documented**: Comprehensive variable and output documentation
 
-### HTTPS Enforcement
-- CloudFront automatically redirects HTTP to HTTPS
-- Modern TLS protocols and cipher suites only
-- HSTS headers enabled for enhanced security
+### Environment Isolation
+- **Separate State**: Each environment has its own Terraform state
+- **Independent Deployment**: Environments can be deployed independently
+- **Resource Isolation**: No cross-environment resource dependencies
+- **Access Control**: Terraform Cloud workspace-level access control
 
-### Credentials Management
-- AWS credentials stored as encrypted environment variables in Terraform Cloud
-- No sensitive data committed to version control
-- `.tfvars` files excluded via `.gitignore`
+### Infrastructure as Code
+- **Version Control**: All configuration stored in Git
+- **Automated Planning**: Pull request triggers plan generation
+- **Approval Workflow**: Production deployments require approval
+- **Rollback Capability**: S3 versioning enables content rollback
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
+- **Module Path**: Ensure module sources use relative paths (`../../modules/`)
+- **Workspace Names**: Verify Terraform Cloud workspace names match
+- **Variables**: Ensure all required variables are defined
 
-**Deployment Failures:**
-- Check Terraform Cloud run logs for detailed error messages
-- Verify AWS permissions in workspace environment variables
-- Ensure S3 bucket names are globally unique
-
-**Domain Issues:**
-- Verify name servers are correctly configured at domain registrar
-- Check Route53 hosted zone records match expected configuration
-- Allow 24-48 hours for DNS propagation
-
-**CloudFront Cache Issues:**
-- Use distribution ID from outputs to create cache invalidations
-- Content updates may take up to 24 hours to propagate globally
-- Create invalidation for `/*` to clear all cached content
-
-### Useful Operations
-
+### Validation Commands
 ```bash
-# View deployment status
-# (Check Terraform Cloud workspace runs)
+# Validate configuration
+terraform validate
 
-# Create CloudFront invalidation
-aws cloudfront create-invalidation \
-  --distribution-id <DISTRIBUTION_ID> \
-  --paths "/*"
+# Check formatting
+terraform fmt -check
 
-# Check domain propagation
-dig <your-domain> NS
-nslookup <your-domain>
+# Initialize and get modules
+terraform init
+terraform get
 ```
-
-## 🔧 Configuration Management
-
-### Variable Updates
-Modify infrastructure by updating variables in Terraform Cloud workspace:
-1. Navigate to workspace settings
-2. Update environment variables or Terraform variables
-3. Queue new plan to preview changes
-4. Apply changes through Terraform Cloud interface
-
-### Adding Features
-- Edit `.tf` files in this directory
-- Commit changes to trigger automatic planning
-- Review plan output in pull request
-- Merge to main branch for automatic deployment
 
 ## 📚 References
 
-- [Terraform Cloud Workspace](https://app.terraform.io) - Deployment management
+- [Terraform Cloud Workspaces](https://app.terraform.io)
 - [AWS S3 Static Website Hosting](https://docs.aws.amazon.com/AmazonS3/latest/userguide/WebsiteHosting.html)
 - [CloudFront Documentation](https://docs.aws.amazon.com/cloudfront/)
-- [Route53 DNS Management](https://docs.aws.amazon.com/route53/) 
+- [Route53 DNS Management](https://docs.aws.amazon.com/route53/)
