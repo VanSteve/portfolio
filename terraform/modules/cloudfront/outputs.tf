@@ -29,6 +29,7 @@ output "website_url" {
 output "certificate_arn" {
   description = "ARN of the ACM certificate (if created)"
   value       = var.domain_name != "" ? aws_acm_certificate.cert[0].arn : null
+  # Note: This is the unvalidated certificate ARN until validation is re-enabled
 }
 
 output "route53_zone_id" {
