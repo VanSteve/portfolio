@@ -13,43 +13,67 @@ This environment uses the following modules:
 ### Prerequisites
 1. Terraform Cloud account with `vansteve-portfolio` organization
 2. AWS credentials configured in Terraform Cloud workspace
-3. Terraform CLI installed locally (for development)
+3. Repository access for VCS-driven workflow
 
 ### Terraform Cloud Workspace Setup
-1. Create workspace named: `portfolio-infrastructure-dev`
-2. Connect to this repository
-3. Set working directory to: `terraform/environments/dev`
+1. Create workspace named: `portfolio-infrastructure-staging`
+2. **Connect to this repository** (VCS-driven)
+3. Set working directory to: `terraform/environments/staging`
 4. Configure environment variables:
    - `AWS_ACCESS_KEY_ID`
    - `AWS_SECRET_ACCESS_KEY`
    - `AWS_DEFAULT_REGION` (optional)
 
-### Local Development
-```bash
-# Navigate to dev environment
-cd terraform/environments/dev
+### VCS-Driven Workflow
+The staging environment uses **VCS-driven deployment**:
 
-# Initialize Terraform
+1. **Development**:
+   ```bash
+   # Create feature branch
+   git checkout -b feature/your-changes
+   
+   # Make infrastructure changes
+   # Edit terraform files as needed
+   
+   # Commit and push
+   git add .
+   git commit -m "Infrastructure changes"
+   git push origin feature/your-changes
+   ```
+
+2. **Pull Request Process**:
+   - Create PR from feature branch to `main`
+   - **Terraform plan runs automatically** on staging as PR check
+   - Review plan output in PR checks
+   - Address any issues and push updates
+
+3. **Deployment**:
+   - **Merge PR to `main`** → **Staging auto-deploys immediately**
+   - Monitor deployment in Terraform Cloud UI
+
+### Local Planning (Optional)
+```bash
+# Navigate to staging environment (for local review only)
+cd terraform/environments/staging
+
+# Initialize Terraform (for local development)
 terraform init
 
-# Plan changes
+# Plan changes (local review - does not deploy)
 terraform plan
-
-# Apply changes (via Terraform Cloud)
-terraform apply
 ```
 
 ## 🔧 Configuration
 
 ### Key Variables
-- `website_bucket_name`: Base name for S3 bucket (default: `portfolio-dev`)
+- `website_bucket_name`: Base name for S3 bucket (default: `portfolio-staging`)
 - `domain_name`: Custom domain (leave empty for CloudFront URL only)
 - `aws_region`: AWS region for deployment (default: `us-west-2`)
 
 ### Environment-Specific Settings
-- **S3 Versioning**: Enabled with 7-day retention for non-current versions
-- **CloudFront Logging**: Disabled to reduce costs
-- **Price Class**: `PriceClass_100` (most cost-effective)
+- **S3 Versioning**: Enabled with 30-day retention for non-current versions
+- **CloudFront Logging**: Enabled for testing
+- **Price Class**: `PriceClass_100` (cost-effective for staging)
 - **Tags**: Environment-specific tags for cost tracking
 
 ## 📊 Outputs

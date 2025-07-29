@@ -13,18 +13,18 @@ This environment uses the following modules:
 ### Prerequisites
 1. Terraform Cloud account with `vansteve-portfolio` organization
 2. AWS credentials configured in Terraform Cloud workspace
-3. Terraform CLI installed locally (for development)
+3. Terraform CLI installed locally
 
 ### Terraform Cloud Workspace Setup
 1. Create workspace named: `portfolio-infrastructure-dev`
-2. Connect to this repository
+2. **Connect to this repository** (CLI-driven, not VCS-driven)
 3. Set working directory to: `terraform/environments/dev`
 4. Configure environment variables:
    - `AWS_ACCESS_KEY_ID`
    - `AWS_SECRET_ACCESS_KEY`
    - `AWS_DEFAULT_REGION` (optional)
 
-### Local Development
+### Local Development Workflow
 ```bash
 # Navigate to dev environment
 cd terraform/environments/dev
@@ -35,9 +35,11 @@ terraform init
 # Plan changes
 terraform plan
 
-# Apply changes (via Terraform Cloud)
+# Apply changes directly via CLI
 terraform apply
 ```
+
+**Note**: The dev environment is **CLI-driven** for rapid iteration and testing. Changes are applied directly from your local machine.
 
 ## 🔧 Configuration
 

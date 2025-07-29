@@ -159,7 +159,7 @@ style K padding:10px
 - **AWS Account** with appropriate permissions
 - **Terraform Cloud Account** for state management
 - **GitHub Account** with repository access
-- **Domain Name** (optional, can use CloudFront distribution URL)
+- **Custom Domain Name** for production deployment (configured via IONOS at the time of writing)
 
 ### Local Development Setup
 
@@ -191,18 +191,16 @@ style K padding:10px
    - Create workspace in Terraform Cloud
    - Set up AWS credentials as environment variables
    - Configure backend in `terraform/environments/*/backend.tf`
+   - Set `domain_name` variable for production custom domain
 
 2. **Deploy infrastructure**
-   ```bash
-   cd terraform/environments/prod
-   terraform init
-   terraform plan
-   terraform apply
-   ```
+   - **Development**: CLI-driven workflow (`terraform apply`)
+   - **Staging/Production**: VCS-driven workflow (merge to `main` triggers auto-deployment)
 
 3. **Deploy website**
-   - Push to `main` branch triggers staging deployment
-   - Create release tag triggers production deployment
+   - **TBD**: Website build and deployment pipeline not yet implemented
+   - **Future**: Will include automated content deployment on code changes
+   - **Current**: Only infrastructure (S3, CloudFront, Route 53) is deployed
 
 ## 🔄 CI/CD Pipeline
 
@@ -233,8 +231,8 @@ style K padding:10px
 | Environment | Trigger | URL | Purpose |
 |-------------|---------|-----|---------|
 | **Development** | Local | `localhost:3000` | Local development |
-| **Staging** | Push to `main` | `staging.example.com` | Integration testing |
-| **Production** | Release tag | `example.com` | Live website |
+| **Staging** | Push to `main` | CloudFront URL | Integration testing |
+| **Production** | Release tag | `https://fitzs.io` | Live website |
 
 ## 🔒 Security Features
 

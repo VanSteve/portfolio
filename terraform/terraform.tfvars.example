@@ -8,7 +8,7 @@ environment = "prod"
 
 # Website Configuration
 website_bucket_name = "vansteve-portfolio-website"  # Region will be auto-appended: vansteve-portfolio-website-us-west-2
-domain_name = ""  # Leave empty to use CloudFront domain, or set to your custom domain like "fitzs.io"
+domain_name = "fitzs.io"  # Set to your custom domain, or leave empty to use CloudFront domain only
 
 # Project Configuration
 project_name = "portfolio"

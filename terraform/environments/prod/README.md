@@ -13,52 +13,82 @@ This environment uses the following modules:
 ### Prerequisites
 1. Terraform Cloud account with `vansteve-portfolio` organization
 2. AWS credentials configured in Terraform Cloud workspace
-3. Terraform CLI installed locally (for development)
+3. Repository access for VCS-driven workflow
 
 ### Terraform Cloud Workspace Setup
 1. **Workspace Name**: `portfolio-infrastructure-prod`
-2. Connect to this repository
+2. **Connect to this repository** (VCS-driven)
 3. Set working directory to: `terraform/environments/prod`
 4. Configure environment variables:
    - `AWS_ACCESS_KEY_ID`
    - `AWS_SECRET_ACCESS_KEY`
    - `AWS_DEFAULT_REGION` (optional)
 
-### Local Development
+### VCS-Driven Workflow
+The production environment uses **VCS-driven deployment**:
+
+1. **Development**:
+   ```bash
+   # Create feature branch
+   git checkout -b feature/your-changes
+   
+   # Make infrastructure changes
+   # Edit terraform files as needed
+   
+   # Commit and push
+   git add .
+   git commit -m "Infrastructure changes"
+   git push origin feature/your-changes
+   ```
+
+2. **Pull Request Process**:
+   - Create PR from feature branch to `main`
+   - **Terraform plan runs automatically** on both staging AND production as PR checks
+   - Review plan output in PR checks for both environments
+   - Address any issues and push updates
+
+3. **Deployment**:
+   - **Merge PR to `main`** → **Both staging AND production auto-deploy immediately**
+   - Monitor deployment in Terraform Cloud UI
+   - **Note**: Currently both environments deploy on merge (this may change in future)
+
+### Local Planning (Optional)
 ```bash
-# Navigate to prod environment
+# Navigate to prod environment (for local review only)
 cd terraform/environments/prod
 
-# Initialize Terraform
+# Initialize Terraform (for local development)
 terraform init
 
-# Plan changes
+# Plan changes (local review - does not deploy)
 terraform plan
 
-# Apply changes (via Terraform Cloud)
-terraform apply
+# For domain setup: Set domain_name variable in Terraform Cloud workspace UI
 ```
 
 ## 🔧 Configuration
 
 ### Key Variables
-- `website_bucket_name`: Base name for S3 bucket
-- `domain_name`: Custom domain (configure for production domain)
+- `website_bucket_name`: Base name for S3 bucket (default: `portfolio-prod`)
+- `domain_name`: **Production custom domain** (e.g., `fitzs.io`) - **Required for production**
 - `aws_region`: AWS region for deployment (default: `us-west-2`)
 
 ### Production-Specific Settings
-- **S3 Versioning**: Enabled with production-appropriate retention
-- **CloudFront Logging**: Can be enabled for production monitoring
-- **Price Class**: Configurable based on global requirements
-- **SSL Certificate**: Production domain certificate with DNS validation
+- **S3 Versioning**: Enabled with 90-day retention for production data protection
+- **CloudFront Logging**: Enabled for production monitoring and analytics
+- **Price Class**: `PriceClass_All` for global performance
+- **SSL Certificate**: Automatic via ACM with DNS validation
+- **Route 53**: Hosted zone and DNS records automatically configured
 
 ## 📊 Outputs
 
 After deployment:
-- `website_url`: Complete production website URL
+- `website_url`: Production website URL (https://fitzs.io)
 - `cloudfront_distribution_id`: For cache invalidation
 - `website_bucket_name`: For content uploads
-- `route53_name_servers`: DNS configuration (if using custom domain)
+- `route53_name_servers`: **For domain registrar configuration**
+- `route53_zone_id`: Route 53 hosted zone ID
+- `certificate_arn`: SSL certificate ARN
 
 ## 🔒 Production Considerations
 

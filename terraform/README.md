@@ -38,29 +38,45 @@ The infrastructure provides:
 
 ## 🚀 Deployment Workflow
 
-### 1. Development
+### Development Environment (CLI-Driven)
+For rapid development and testing:
 ```bash
 cd terraform/environments/dev
 terraform init
 terraform plan
-terraform apply
+terraform apply  # Direct CLI deployment
 ```
 
-### 2. Staging
-```bash
-cd terraform/environments/staging
-terraform init
-terraform plan
-terraform apply
-```
+### Staging & Production (VCS-Driven)
+For staging and production deployments:
 
-### 3. Production
-```bash
-cd terraform/environments/prod
-terraform init
-terraform plan
-terraform apply
-```
+1. **Create Feature Branch**:
+   ```bash
+   git checkout -b feature/infrastructure-changes
+   # Make your terraform changes
+   git add .
+   git commit -m "Update infrastructure"
+   git push origin feature/infrastructure-changes
+   ```
+
+2. **Pull Request Workflow**:
+   - Create PR from feature branch to `main`
+   - **Automatic plan checks** run on both staging AND production
+   - Review plans in PR checks
+   - Address any issues
+
+3. **Deployment**:
+   - **Merge PR to `main`** → **Both staging and production auto-deploy**
+   - Monitor in Terraform Cloud UI
+
+### Environment Summary
+| Environment | Workflow | Trigger | Workspace |
+|-------------|----------|---------|-----------|
+| **Development** | CLI-driven | Manual `terraform apply` | `portfolio-infrastructure-dev` |
+| **Staging** | VCS-driven | Merge to `main` | `portfolio-infrastructure-staging` |
+| **Production** | VCS-driven | Merge to `main` | `portfolio-infrastructure-prod` |
+
+**Note**: Currently both staging and production deploy on merge to `main`. This workflow may change in the future to use release tags for production.
 
 ## 🔧 Module Development
 
