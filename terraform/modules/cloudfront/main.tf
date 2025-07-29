@@ -42,8 +42,7 @@ resource "aws_cloudfront_distribution" "distribution" {
   comment             = var.comment
   default_root_object = var.default_root_object
 
-  # TEMPORARILY DISABLED - Enable after IONOS name servers are updated
-  # aliases = var.domain_name != "" ? [var.domain_name] : []
+  aliases = var.domain_name != "" ? [var.domain_name] : []
 
   # CloudFront Logging Configuration (optional)
   dynamic "logging_config" {
@@ -93,28 +92,22 @@ resource "aws_cloudfront_distribution" "distribution" {
 
   tags = var.tags
 
-  # Use default CloudFront certificate temporarily
-  viewer_certificate {
-    cloudfront_default_certificate = true
+  # Conditional viewer certificate configuration
+  dynamic "viewer_certificate" {
+    for_each = var.domain_name == "" ? [1] : []
+    content {
+      cloudfront_default_certificate = true
+    }
   }
 
-  # TEMPORARILY DISABLED - Enable after IONOS name servers are updated
-  # # Conditional viewer certificate configuration
-  # dynamic "viewer_certificate" {
-  #   for_each = var.domain_name == "" ? [1] : []
-  #   content {
-  #     cloudfront_default_certificate = true
-  #   }
-  # }
-
-  # dynamic "viewer_certificate" {
-  #   for_each = var.domain_name != "" ? [1] : []
-  #   content {
-  #     acm_certificate_arn      = aws_acm_certificate.cert[0].arn  # Use unvalidated cert temporarily
-  #     ssl_support_method       = "sni-only"
-  #     minimum_protocol_version = var.minimum_protocol_version
-  #   }
-  # }
+  dynamic "viewer_certificate" {
+    for_each = var.domain_name != "" ? [1] : []
+    content {
+      acm_certificate_arn      = aws_acm_certificate_validation.cert[0].certificate_arn
+      ssl_support_method       = "sni-only"
+      minimum_protocol_version = var.minimum_protocol_version
+    }
+  }
 }
 
 # ACM Certificate (only if domain_name is provided)
@@ -135,40 +128,38 @@ resource "aws_acm_certificate" "cert" {
 }
 
 # Route53 record for ACM certificate validation
-# TEMPORARILY DISABLED - Enable after updating IONOS name servers
-# resource "aws_route53_record" "cert_validation" {
-#   for_each = var.domain_name != "" ? {
-#     for dvo in aws_acm_certificate.cert[0].domain_validation_options : dvo.domain_name => {
-#       name   = dvo.resource_record_name
-#       record = dvo.resource_record_value
-#       type   = dvo.resource_record_type
-#     }
-#   } : {}
+resource "aws_route53_record" "cert_validation" {
+  for_each = var.domain_name != "" ? {
+    for dvo in aws_acm_certificate.cert[0].domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  } : {}
 
-#   allow_overwrite = true
-#   name            = each.value.name
-#   records         = [each.value.record]
-#   ttl             = 60
-#   type            = each.value.type
-#   zone_id         = var.create_route53_zone ? aws_route53_zone.zone[0].zone_id : var.route53_zone_id
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = var.create_route53_zone ? aws_route53_zone.zone[0].zone_id : var.route53_zone_id
 
-#   depends_on = [aws_route53_zone.zone]
-# }
+  depends_on = [aws_route53_zone.zone]
+}
 
 # ACM certificate validation
-# TEMPORARILY DISABLED - Enable after updating IONOS name servers
-# resource "aws_acm_certificate_validation" "cert" {
-#   count                   = var.domain_name != "" ? 1 : 0
-#   provider                = aws.us_east_1
-#   certificate_arn         = aws_acm_certificate.cert[0].arn
-#   validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+resource "aws_acm_certificate_validation" "cert" {
+  count                   = var.domain_name != "" ? 1 : 0
+  provider                = aws.us_east_1
+  certificate_arn         = aws_acm_certificate.cert[0].arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
 
-#   depends_on = [aws_route53_record.cert_validation]
+  depends_on = [aws_route53_record.cert_validation]
 
-#   timeouts {
-#     create = "10m"
-#   }
-# }
+  timeouts {
+    create = "10m"
+  }
+}
 
 # Route53 Hosted Zone (only if domain_name is provided and create_route53_zone is true)
 resource "aws_route53_zone" "zone" {
@@ -181,16 +172,15 @@ resource "aws_route53_zone" "zone" {
 }
 
 # Route53 Record for CloudFront Distribution (only if domain_name is provided)
-# TEMPORARILY DISABLED - Enable after IONOS name servers are updated
-# resource "aws_route53_record" "record" {
-#   count   = var.domain_name != "" ? 1 : 0
-#   zone_id = var.create_route53_zone ? aws_route53_zone.zone[0].zone_id : var.route53_zone_id
-#   name    = var.domain_name
-#   type    = "A"
+resource "aws_route53_record" "record" {
+  count   = var.domain_name != "" ? 1 : 0
+  zone_id = var.create_route53_zone ? aws_route53_zone.zone[0].zone_id : var.route53_zone_id
+  name    = var.domain_name
+  type    = "A"
 
-#   alias {
-#     name                   = aws_cloudfront_distribution.distribution.domain_name
-#     zone_id                = aws_cloudfront_distribution.distribution.hosted_zone_id
-#     evaluate_target_health = false
-#   }
-# } 
+  alias {
+    name                   = aws_cloudfront_distribution.distribution.domain_name
+    zone_id                = aws_cloudfront_distribution.distribution.hosted_zone_id
+    evaluate_target_health = false
+  }
+} 
