@@ -42,7 +42,7 @@ resource "aws_cloudfront_distribution" "distribution" {
   comment             = var.comment
   default_root_object = var.default_root_object
 
-  aliases = var.domain_name != "" ? [var.domain_name] : []
+  aliases = var.domain_name != "" ? [var.domain_name, "www.${var.domain_name}"] : []
 
   # CloudFront Logging Configuration (optional)
   dynamic "logging_config" {
@@ -113,10 +113,11 @@ resource "aws_cloudfront_distribution" "distribution" {
 # ACM Certificate (only if domain_name is provided)
 # NOTE: ACM certificates for CloudFront MUST be created in us-east-1
 resource "aws_acm_certificate" "cert" {
-  count             = var.domain_name != "" ? 1 : 0
-  provider          = aws.us_east_1
-  domain_name       = var.domain_name
-  validation_method = "DNS"
+  count                     = var.domain_name != "" ? 1 : 0
+  provider                  = aws.us_east_1
+  domain_name               = var.domain_name
+  subject_alternative_names = ["www.${var.domain_name}"]
+  validation_method         = "DNS"
 
   tags = merge(var.tags, {
     Name = "${var.domain_name} Certificate"
@@ -171,7 +172,7 @@ resource "aws_route53_zone" "zone" {
   })
 }
 
-# Route53 Record for CloudFront Distribution (only if domain_name is provided)
+# Route53 A Record for CloudFront Distribution (IPv4)
 resource "aws_route53_record" "record" {
   count   = var.domain_name != "" ? 1 : 0
   zone_id = var.create_route53_zone ? aws_route53_zone.zone[0].zone_id : var.route53_zone_id
@@ -183,4 +184,28 @@ resource "aws_route53_record" "record" {
     zone_id                = aws_cloudfront_distribution.distribution.hosted_zone_id
     evaluate_target_health = false
   }
+}
+
+# Route53 AAAA Record for CloudFront Distribution (IPv6)
+resource "aws_route53_record" "record_ipv6" {
+  count   = var.domain_name != "" ? 1 : 0
+  zone_id = var.create_route53_zone ? aws_route53_zone.zone[0].zone_id : var.route53_zone_id
+  name    = var.domain_name
+  type    = "AAAA"
+
+  alias {
+    name                   = aws_cloudfront_distribution.distribution.domain_name
+    zone_id                = aws_cloudfront_distribution.distribution.hosted_zone_id
+    evaluate_target_health = false
+  }
+}
+
+# Route53 CNAME Record for www subdomain
+resource "aws_route53_record" "www_record" {
+  count   = var.domain_name != "" ? 1 : 0
+  zone_id = var.create_route53_zone ? aws_route53_zone.zone[0].zone_id : var.route53_zone_id
+  name    = "www.${var.domain_name}"
+  type    = "CNAME"
+  ttl     = 300
+  records = [var.domain_name]
 } 
