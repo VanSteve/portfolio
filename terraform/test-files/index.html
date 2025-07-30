@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio Infrastructure Test</title>
+    <title>Steve Fitzsimmons - Coming Soon!</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -12,92 +12,149 @@
             padding: 40px 20px;
             line-height: 1.6;
             color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
         }
+        
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
         .header {
             text-align: center;
             margin-bottom: 40px;
         }
-        .status {
-            background: #e8f5e8;
-            border: 2px solid #4caf50;
+        
+        .hero-image {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #667eea;
+            margin: 0 auto 20px;
+            display: block;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .coming-soon {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 30px 0;
+            text-align: center;
+        }
+        
+        .early-bird {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 8px;
+            padding: 25px;
+            margin: 25px 0;
+        }
+        
+        .mango-prize {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .contact-info {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
             border-radius: 8px;
             padding: 20px;
             margin: 20px 0;
         }
-        .info {
-            background: #f5f5f5;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-        }
-        .code {
-            background: #f8f8f8;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 10px;
-            font-family: 'Monaco', 'Consolas', monospace;
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
             font-size: 14px;
+        }
+        
+        .emoji {
+            font-size: 1.2em;
+        }
+        
+        a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>🚀 Portfolio Infrastructure Test</h1>
-        <p>S3 + CloudFront + Terraform Modules</p>
-    </div>
+    <div class="container">
+        <div class="header">
+            <img src="camping.jpg" alt="Steve at Poland Lake Campground, BC" class="hero-image">
+            <h1>👋 Hey there, Early Explorer!</h1>
+            <p><strong>Steve Fitzsimmons</strong> - DevOps Specialist</p>
+        </div>
 
-    <div class="status">
-        <h2>✅ Infrastructure Status: Operational</h2>
-        <p>If you can see this page, your S3 + CloudFront infrastructure is working correctly!</p>
-    </div>
+        <div class="coming-soon">
+            <h2 class="pulse">🚧 Website Coming Soon! 🚧</h2>
+            <p>You've found my corner of the internet while it's still under construction. My portfolio website is currently being built with all the DevOps bells and whistles!</p>
+        </div>
 
-    <div class="info">
-        <h3>📋 Infrastructure Components</h3>
-        <ul>
-            <li><strong>S3 Bucket:</strong> Static website hosting with public read access</li>
-            <li><strong>CloudFront Distribution:</strong> Global CDN with HTTPS redirect</li>
-            <li><strong>ACM Certificate:</strong> SSL/TLS certificate (if custom domain configured)</li>
-            <li><strong>Route53:</strong> DNS management (if custom domain configured)</li>
-        </ul>
-    </div>
+        <div class="early-bird">
+            <h3><span class="emoji">🎉</span> Congratulations, You Found Me!</h3>
+            <p>You've discovered this site during its super-secret pre-launch phase! I honestly didn't expect anyone to find this page in these first few weeks when I just left this placeholder here. Consider yourself part of an <strong>exclusive club</strong> of early visitors!</p>
+            
+            <p>This page is currently powered by:</p>
+            <ul>
+                <li><span class="emoji">☁️</span> AWS CloudFront (Global CDN)</li>
+                <li><span class="emoji">🪣</span> Amazon S3 (Static Hosting)</li>
+                <li><span class="emoji">🔒</span> AWS Certificate Manager (SSL/TLS)</li>
+                <li><span class="emoji">🌐</span> Route 53 (DNS Management)</li>
+                <li><span class="emoji">⚙️</span> Terraform (Infrastructure as Code)</li>
+            </ul>
+        </div>
 
-    <div class="info">
-        <h3>🔧 Terraform Modules Used</h3>
-        <ul>
-            <li><code>s3-website</code> - S3 bucket configuration and policies</li>
-            <li><code>cloudfront</code> - CloudFront distribution and SSL certificates</li>
-        </ul>
-    </div>
+        <div class="mango-prize">
+            <h3><span class="emoji">🥭</span> SPECIAL OFFER FOR EARLY VISITORS! <span class="emoji">🥭</span></h3>
+            <p><strong>If you message me and mention you found this page, I'll buy you a mango!</strong></p>
+            <p>No joke - I'm so impressed you found this during the stealth phase that you deserve a delicious tropical fruit as a reward. It's the least I can do for my first visitor!</p>
+        </div>
 
-    <div class="info">
-        <h3>📝 Next Steps</h3>
-        <ol>
-            <li>Replace this test file with your actual portfolio content</li>
-            <li>Upload files to the S3 bucket specified in outputs</li>
-            <li>Create cache invalidations using the CloudFront distribution ID</li>
-            <li>Configure custom domain DNS if using Route53</li>
-        </ol>
-    </div>
+        <div class="contact-info">
+            <h3><span class="emoji">📫</span> Get Your Mango (and Say Hi!)</h3>
+            <p>Want to claim your mango prize or just chat about DevOps, cloud architecture, or that beautiful BC camping spot in my photo?</p>
+            
+            <p><strong>Reach out on LinkedIn:</strong><br>
+            <a href="https://ca.linkedin.com/in/stephen-fitzsimmons-8ab4b025" target="_blank">linkedin.com/in/stephen-fitzsimmons-8ab4b025</a></p>
+            
+            <p><strong>Or check back soon</strong> for the full portfolio experience!</p>
+        </div>
 
-    <div class="info">
-        <h3>📊 Useful Commands</h3>
-        <div class="code">
-# Upload files to S3 bucket<br>
-aws s3 cp index.html s3://&lt;bucket-name&gt;/<br><br>
-
-# Create CloudFront invalidation<br>
-aws cloudfront create-invalidation \<br>
-&nbsp;&nbsp;--distribution-id &lt;distribution-id&gt; \<br>
-&nbsp;&nbsp;--paths "/*"
+        <div class="footer">
+            <p><span class="emoji">🏕️</span> Photo: Me at Poland Lake Campground in Manning Park, BC, Canada</p>
+            <p><small>Built with <span class="emoji">❤️</span> in Burnaby, BC</small></p>
         </div>
     </div>
 
-    <footer style="text-align: center; margin-top: 40px; color: #666;">
-        <p>Generated: <span id="timestamp"></span></p>
-    </footer>
-
     <script>
-        document.getElementById('timestamp').textContent = new Date().toISOString();
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
     </script>
 </body>
 </html> 
