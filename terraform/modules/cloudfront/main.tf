@@ -157,7 +157,7 @@ resource "aws_acm_certificate_validation" "cert" {
   depends_on = [aws_route53_record.cert_validation]
 
   timeouts {
-    create = "10m"
+    create = "20m"  # Increased timeout for ACM validation delays
   }
 }
 
