@@ -3,10 +3,254 @@ name: Deploy to Production
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      force_deploy:
+        description: 'Force production deployment'
+        required: true
+        default: false
+        type: boolean
+      release_tag:
+        description: 'Release tag to deploy (leave empty for latest)'
+        required: false
+        type: string
+
+env:
+  AWS_REGION: us-west-2
 
 jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
   deploy-production:
+    name: Deploy to Production Environment
     runs-on: ubuntu-latest
+    needs: build
+    
     steps:
-      - name: Placeholder
-        run: echo "TODO - Implement production deployment workflow" 
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.release_tag || github.ref }}
+
+      - name: Validate production deployment
+        run: |
+          echo "🔍 Validating production deployment conditions..."
+          
+          # Check if this is a valid release or manual dispatch
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "✅ Triggered by release: ${{ github.event.release.tag_name }}"
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.force_deploy }}" = "true" ]; then
+            echo "✅ Manual deployment authorized"
+          else
+            echo "❌ Invalid deployment trigger for production"
+            exit 1
+          fi
+          
+          # Verify we're not deploying from a branch
+          if [[ "${{ github.ref }}" == refs/heads/* ]] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "❌ Production deployments must be from releases, not branches"
+            exit 1
+          fi
+          
+          echo "✅ Production deployment validation passed"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: website-build-${{ github.sha }}
+          path: dist/
+
+      - name: Pre-deployment backup
+        id: backup
+        run: |
+          echo "📦 Creating backup of current production site..."
+          
+          # Get production bucket name
+          BUCKET_NAME=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'portfolio-prod')].Name" --output text)
+          
+          if [ -z "$BUCKET_NAME" ]; then
+            echo "⚠️ Could not find production bucket"
+            echo "bucket-name=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "bucket-name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+          
+          # Create backup bucket name with timestamp
+          BACKUP_BUCKET="$BUCKET_NAME-backup-$(date +%Y%m%d-%H%M%S)"
+          echo "backup-bucket=$BACKUP_BUCKET" >> $GITHUB_OUTPUT
+          
+          # Create backup of current production content
+          echo "Creating backup bucket: $BACKUP_BUCKET"
+          aws s3 mb s3://$BACKUP_BUCKET
+          aws s3 sync s3://$BUCKET_NAME/ s3://$BACKUP_BUCKET/
+          
+          echo "✅ Production backup created: $BACKUP_BUCKET"
+
+      - name: Deploy to S3 Production
+        run: |
+          echo "🚀 Deploying website to S3 production bucket..."
+          
+          BUCKET_NAME="${{ steps.backup.outputs.bucket-name }}"
+          
+          if [ -z "$BUCKET_NAME" ]; then
+            echo "❌ Production bucket not found"
+            exit 1
+          fi
+          
+          # Deploy with production-optimized cache settings
+          echo "Deploying static assets with long cache..."
+          aws s3 sync dist/ s3://$BUCKET_NAME/ \
+            --delete \
+            --cache-control "public, max-age=31536000, immutable" \
+            --exclude "*.html" \
+            --exclude "*.json" \
+            --exclude "*.xml"
+          
+          # Deploy HTML and other files with shorter cache
+          echo "Deploying HTML files with short cache..."
+          aws s3 sync dist/ s3://$BUCKET_NAME/ \
+            --delete \
+            --cache-control "public, max-age=3600, must-revalidate" \
+            --include "*.html" \
+            --include "*.json" \
+            --include "*.xml"
+          
+          echo "✅ Website files deployed to production S3"
+
+      - name: Get CloudFront distribution ID
+        id: get-cloudfront
+        run: |
+          echo "🔍 Getting CloudFront distribution ID for production..."
+          
+          BUCKET_NAME="${{ steps.backup.outputs.bucket-name }}"
+          
+          # Get CloudFront distribution ID for this S3 bucket
+          DISTRIBUTION_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?contains(Origins.Items[0].DomainName, '$BUCKET_NAME')].Id" \
+            --output text)
+          
+          if [ -z "$DISTRIBUTION_ID" ]; then
+            echo "❌ Could not find CloudFront distribution for production bucket: $BUCKET_NAME"
+            exit 1
+          else
+            echo "✅ Found CloudFront distribution: $DISTRIBUTION_ID"
+            echo "distribution-id=$DISTRIBUTION_ID" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Invalidate CloudFront cache
+        run: |
+          echo "🔄 Invalidating CloudFront cache for production..."
+          
+          DISTRIBUTION_ID="${{ steps.get-cloudfront.outputs.distribution-id }}"
+          
+          # Create invalidation for all files
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id $DISTRIBUTION_ID \
+            --paths "/*" \
+            --query "Invalidation.Id" \
+            --output text)
+          
+          echo "✅ CloudFront invalidation created: $INVALIDATION_ID"
+          echo "⏳ Invalidation may take 10-15 minutes to complete"
+          
+          # Store invalidation ID for tracking
+          echo "invalidation-id=$INVALIDATION_ID" >> $GITHUB_OUTPUT
+
+      - name: Verify production deployment
+        run: |
+          echo "🧪 Verifying production deployment..."
+          
+          BUCKET_NAME="${{ steps.backup.outputs.bucket-name }}"
+          
+          # Check if index.html exists and is accessible
+          if aws s3 ls s3://$BUCKET_NAME/index.html; then
+            echo "✅ index.html successfully deployed to production"
+          else
+            echo "❌ index.html not found in production S3 bucket"
+            exit 1
+          fi
+          
+          # Get CloudFront domain name
+          DISTRIBUTION_ID="${{ steps.get-cloudfront.outputs.distribution-id }}"
+          CLOUDFRONT_DOMAIN=$(aws cloudfront get-distribution \
+            --id $DISTRIBUTION_ID \
+            --query "Distribution.DomainName" \
+            --output text)
+          
+          echo "🌐 Production CloudFront URL: https://$CLOUDFRONT_DOMAIN"
+          
+          # Test CloudFront accessibility (may take time due to cache)
+          echo "Testing CloudFront accessibility..."
+          if curl -f -s https://$CLOUDFRONT_DOMAIN > /dev/null; then
+            echo "✅ Production website is accessible via CloudFront"
+          else
+            echo "⚠️ CloudFront may still be updating (this is normal immediately after deployment)"
+          fi
+
+      - name: Post-deployment cleanup
+        if: always()
+        run: |
+          echo "🧹 Performing post-deployment cleanup..."
+          
+          BACKUP_BUCKET="${{ steps.backup.outputs.backup-bucket }}"
+          
+          if [ -n "$BACKUP_BUCKET" ]; then
+            # Set lifecycle policy on backup bucket to auto-delete after 30 days
+            cat > backup-lifecycle.json << EOF
+          {
+            "Rules": [
+              {
+                "ID": "AutoDeleteBackup",
+                "Status": "Enabled",
+                "Expiration": {
+                  "Days": 30
+                }
+              }
+            ]
+          }
+          EOF
+            
+            aws s3api put-bucket-lifecycle-configuration \
+              --bucket $BACKUP_BUCKET \
+              --lifecycle-configuration file://backup-lifecycle.json
+              
+            echo "✅ Backup retention policy set (30 days)"
+          fi
+
+      - name: Deployment Summary
+        run: |
+          echo "## 🎉 Production Deployment Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Website has been successfully deployed to production!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: \`production\`" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "- **Release**: \`${{ github.event.release.tag_name }}\`" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **S3 Bucket**: \`${{ steps.backup.outputs.bucket-name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **CloudFront Distribution**: \`${{ steps.get-cloudfront.outputs.distribution-id }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Backup Created**: \`${{ steps.backup.outputs.backup-bucket }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cache Invalidation**: ✅ Initiated (\`${{ steps.get-cloudfront.outputs.invalidation-id }}\`)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Access Your Site" >> $GITHUB_STEP_SUMMARY
+          echo "Your production website is available at: **https://fitzs.io**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note**: Cache invalidation may take 10-15 minutes to complete." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🛡️ Safety Measures" >> $GITHUB_STEP_SUMMARY
+          echo "- Pre-deployment backup created" >> $GITHUB_STEP_SUMMARY
+          echo "- Production-optimized cache headers applied" >> $GITHUB_STEP_SUMMARY
+          echo "- Backup retention policy set (30 days)" >> $GITHUB_STEP_SUMMARY 

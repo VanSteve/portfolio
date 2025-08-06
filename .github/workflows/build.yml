@@ -1,0 +1,118 @@
+name: Build Website
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/test-files/**'
+      - '.github/workflows/build.yml'
+  workflow_call:
+    outputs:
+      artifact-id:
+        description: 'Build artifact ID for deployment'
+        value: ${{ jobs.build.outputs.artifact-id }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate HTML files
+        run: |
+          echo "🔍 Validating HTML files..."
+          
+          # Install HTML validator
+          sudo apt-get update
+          sudo apt-get install -y tidy
+          
+          # Find and validate all HTML files
+          find terraform/test-files -name "*.html" 2>/dev/null | while read file; do
+            echo "Validating: $file"
+            if ! tidy -q -e "$file"; then
+              echo "❌ HTML validation failed for: $file"
+              exit 1
+            fi
+          done
+          
+          echo "✅ All HTML files are valid"
+
+      - name: Build website
+        run: |
+          echo "🏗️ Building static website..."
+          
+          # Create dist directory
+          mkdir -p dist
+          
+          # Copy static files from terraform/test-files (current website source)
+          if [ -d "terraform/test-files" ]; then
+            cp -r terraform/test-files/* dist/
+            echo "✅ Copied files from terraform/test-files"
+          else
+            echo "❌ No terraform/test-files directory found"
+            exit 1
+          fi
+          
+          # Ensure we have an index.html
+          if [ ! -f "dist/index.html" ]; then
+            echo "❌ No index.html found in build output"
+            exit 1
+          fi
+          
+          echo "✅ Static website build completed"
+
+      - name: Test build output
+        run: |
+          echo "🧪 Testing build output..."
+          
+          # Check if critical files exist
+          if [ ! -f "dist/index.html" ]; then
+            echo "❌ Missing index.html"
+            exit 1
+          fi
+          
+          # Validate built HTML
+          tidy -q -e dist/index.html
+          
+          # Check file permissions are correct
+          find dist -type f -exec chmod 644 {} \;
+          
+          # Check for any executable files that shouldn't be
+          EXECUTABLE_FILES=$(find dist -type f -executable || true)
+          if [ -n "$EXECUTABLE_FILES" ]; then
+            echo "⚠️ Found executable files, fixing permissions..."
+            find dist -type f -exec chmod 644 {} \;
+          fi
+          
+          echo "✅ Build output is valid"
+
+      - name: Upload build artifacts
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-build-${{ github.sha }}
+          path: dist/
+          retention-days: 30
+          compression-level: 6
+
+      - name: Build summary
+        run: |
+          echo "## 🎉 Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Static website build completed successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source**: \`terraform/test-files/\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Artifact Name**: \`website-build-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Size**: $(du -sh dist | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Files Built**: $(find dist -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 Build Contents" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          ls -la dist/ >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

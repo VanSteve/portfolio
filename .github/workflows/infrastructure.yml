@@ -1,0 +1,74 @@
+name: Infrastructure Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/infrastructure.yml'
+
+# Note: Terraform Cloud handles actual deployment via VCS integration
+# This workflow only validates Terraform code in PRs
+
+jobs:
+  terraform-validation:
+    name: Terraform Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~1.0"
+
+      - name: Terraform Format Check
+        run: |
+          echo "🔍 Checking Terraform formatting..."
+          terraform fmt -check -recursive terraform/
+          echo "✅ Terraform formatting is correct"
+
+      - name: Terraform Validation (All Environments)
+        run: |
+          echo "🔍 Validating all Terraform environments..."
+          
+          for env in dev staging prod; do
+            echo "Validating $env environment..."
+            cd terraform/environments/$env
+            terraform init -backend=false
+            terraform validate
+            cd ../../..
+            echo "✅ $env environment is valid"
+          done
+
+      - name: Terraform Security Scan
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+          output_format: sarif
+          output_file_path: checkov-report.sarif
+
+      - name: Upload Security Scan Results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: checkov-report.sarif
+
+      - name: Validation Summary
+        run: |
+          echo "## ✅ Terraform Validation Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "All Terraform configurations are valid and properly formatted!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Validated Environments" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Development (\`terraform/environments/dev/\`)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Staging (\`terraform/environments/staging/\`)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Production (\`terraform/environments/prod/\`)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "- Infrastructure changes will be automatically deployed by **Terraform Cloud VCS integration**" >> $GITHUB_STEP_SUMMARY
+          echo "- Staging: Deployed automatically on merge to \`main\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Production: Deployed automatically on merge to \`main\`" >> $GITHUB_STEP_SUMMARY
