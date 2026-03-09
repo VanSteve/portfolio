@@ -101,6 +101,7 @@ jobs:
       - name: Install accessibility testing tools
         run: |
           npm install -g @axe-core/cli serve
+          npx browser-driver-manager install chrome
 
       - name: Start local server
         run: |
