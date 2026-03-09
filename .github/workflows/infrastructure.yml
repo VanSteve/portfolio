@@ -1,5 +1,9 @@
 name: Infrastructure Validation
 
+permissions:
+  contents: read
+  security-events: write
+
 on:
   pull_request:
     branches: [main]
