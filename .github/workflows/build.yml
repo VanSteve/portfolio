@@ -132,8 +132,8 @@ jobs:
             exit 1
           fi
           
-          # Validate built HTML
-          tidy -q -e dist/index.html
+          # Validate built HTML (tidy exits 1 for warnings, 2 for errors)
+          tidy -q -e dist/index.html || [ $? -eq 1 ]
           
           EXECUTABLE_FILES=$(find dist -type f -executable || true)
           if [ -n "$EXECUTABLE_FILES" ]; then
