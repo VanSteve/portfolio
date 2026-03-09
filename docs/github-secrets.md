@@ -87,7 +87,7 @@ Attach this policy to the role (same permissions previously used by the IAM user
         "s3:ListBucket",
         "s3:GetBucketLocation",
         "s3:CreateBucket",
-        "s3:PutBucketLifecycleConfiguration"
+        "s3:PutLifecycleConfiguration"
       ],
       "Resource": [
         "arn:aws:s3:::portfolio-*",
