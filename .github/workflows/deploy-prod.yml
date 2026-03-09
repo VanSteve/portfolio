@@ -89,13 +89,14 @@ jobs:
           
           # Create backup bucket name with timestamp
           BACKUP_BUCKET="$BUCKET_NAME-backup-$(date +%Y%m%d-%H%M%S)"
-          echo "backup-bucket=$BACKUP_BUCKET" >> $GITHUB_OUTPUT
           
           # Create backup of current production content
           echo "Creating backup bucket: $BACKUP_BUCKET"
           aws s3 mb s3://$BACKUP_BUCKET
           aws s3 sync s3://$BUCKET_NAME/ s3://$BACKUP_BUCKET/
           
+          # Only record the backup bucket after successful creation
+          echo "backup-bucket=$BACKUP_BUCKET" >> $GITHUB_OUTPUT
           echo "✅ Production backup created: $BACKUP_BUCKET"
 
       - name: Deploy to S3 Production
