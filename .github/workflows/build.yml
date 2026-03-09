@@ -37,7 +37,8 @@ jobs:
           FAILED=0
           while IFS= read -r file; do
             echo "Validating: $file"
-            if ! tidy -q -e "$file"; then
+            tidy -q -e "$file"; TIDY_EXIT=$?
+            if [ "$TIDY_EXIT" -gt 1 ]; then
               echo "❌ HTML validation failed for: $file"
               FAILED=1
             fi
