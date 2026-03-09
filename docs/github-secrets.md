@@ -155,12 +155,22 @@ Terraform Cloud handles infrastructure deployment via VCS integration. GitHub Ac
 
 ## GitHub Environments
 
-Create these environments in **Settings** > **Environments**:
+Create these environments in your repository: **Settings** > **Environments** > **New environment**.
 
-- **`staging`** -- for staging deployments
-- **`production`** -- for production deployments
-  - Recommended: require manual approval before deployment
-  - Recommended: restrict to `main` branch only
+### `staging`
+
+1. Click **New environment**, name it `staging`, click **Configure environment**
+2. No additional protection rules needed -- staging deploys automatically on push to `main`
+
+### `production`
+
+1. Click **New environment**, name it `production`, click **Configure environment**
+2. Under **Environment protection rules**:
+   - Check **Required reviewers** and add yourself (or your team). This means production deploys triggered by a release will pause and wait for your manual approval before running.
+3. Under **Deployment branches and tags**:
+   - Change the dropdown from "All branches" to **Selected branches and tags**
+   - Click **Add deployment branch or tag rule**
+   - Add `main` as an allowed branch. This prevents production deploys from any other branch.
 
 ## How It Appears in Workflows
 
