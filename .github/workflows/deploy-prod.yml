@@ -13,10 +13,6 @@ on:
         required: true
         default: false
         type: boolean
-      release_tag:
-        description: 'Release tag to deploy (leave empty for latest)'
-        required: false
-        type: string
 
 env:
   AWS_REGION: us-west-2
@@ -37,8 +33,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.release_tag || github.ref }}
 
       - name: Validate production deployment
         run: |
@@ -156,6 +150,7 @@ jobs:
           fi
 
       - name: Invalidate CloudFront cache
+        id: invalidate
         run: |
           echo "🔄 Invalidating CloudFront cache for production..."
           
@@ -250,7 +245,7 @@ jobs:
           echo "- **S3 Bucket**: \`${{ steps.backup.outputs.bucket-name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **CloudFront Distribution**: \`${{ steps.get-cloudfront.outputs.distribution-id }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **Backup Created**: \`${{ steps.backup.outputs.backup-bucket }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- **Cache Invalidation**: ✅ Initiated (\`${{ steps.get-cloudfront.outputs.invalidation-id }}\`)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cache Invalidation**: ✅ Initiated (\`${{ steps.invalidate.outputs.invalidation-id }}\`)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔗 Access Your Site" >> $GITHUB_STEP_SUMMARY
           echo "Your production website is available at: **https://fitzs.io**" >> $GITHUB_STEP_SUMMARY
