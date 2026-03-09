@@ -1,216 +1,232 @@
-# GitHub Repository Secrets Configuration
+# GitHub Repository Secrets & AWS OIDC Configuration
 
-This document outlines all the required GitHub repository secrets needed for the CI/CD pipeline to function properly.
+This document covers the authentication setup between GitHub Actions and AWS for the CI/CD pipeline. The pipeline uses **OIDC (OpenID Connect) federation** rather than long-lived access keys -- this is the AWS-recommended approach for GitHub Actions.
 
-## 🔐 Required Secrets
+## How It Works
 
-### AWS Credentials
+Instead of storing static AWS credentials, GitHub Actions requests a short-lived OIDC token from GitHub's identity provider and exchanges it with AWS STS for temporary session credentials. No secrets to rotate, no keys to leak.
 
-#### `AWS_ACCESS_KEY_ID`
-- **Description**: AWS access key ID for deploying to S3 and managing CloudFront
-- **Scope**: Repository secret
-- **Used by**: 
-  - `deploy-staging.yml`
-  - `deploy-prod.yml`
-- **How to obtain**: 
-  1. Create an IAM user in AWS Console
-  2. Attach the policy below (or use existing user)
-  3. Generate access keys
-- **Required permissions**:
-  ```json
-  {
-    "Version": "2012-10-17",
-    "Statement": [
-      {
-        "Effect": "Allow",
-        "Action": [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:ListBucket",
-          "s3:GetBucketLocation",
-          "s3:CreateBucket",
-          "s3:PutBucketLifecycleConfiguration"
-        ],
-        "Resource": [
-          "arn:aws:s3:::portfolio-*",
-          "arn:aws:s3:::portfolio-*/*"
-        ]
+```
+GitHub Actions Runner
+  │
+  ├─ Requests OIDC token from GitHub's IdP
+  │    (token.actions.githubusercontent.com)
+  │
+  ├─ Sends token to AWS STS (AssumeRoleWithWebIdentity)
+  │
+  └─ Receives temporary credentials scoped to IAM role
+       (valid ~1 hour, auto-expire)
+```
+
+## One-Time AWS Setup
+
+### Step 1: Create the OIDC Identity Provider
+
+1. Open the **AWS Console** > **IAM** > **Identity providers**
+2. Click **Add provider**
+3. Configure:
+   - **Provider type**: OpenID Connect
+   - **Provider URL**: `https://token.actions.githubusercontent.com`
+   - **Audience**: `sts.amazonaws.com`
+4. Click **Add provider**
+
+> You only need one OIDC provider per AWS account, even if multiple repos use it.
+
+### Step 2: Create the IAM Role
+
+1. Go to **IAM** > **Roles** > **Create role**
+2. Select **Web identity** as the trusted entity type
+3. Choose:
+   - **Identity provider**: `token.actions.githubusercontent.com`
+   - **Audience**: `sts.amazonaws.com`
+4. Click **Next** and attach the permissions policy below
+5. Name the role (e.g., `GitHubActionsDeployRole`)
+6. After creation, edit the role's **Trust policy** to scope it to your repository:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::<YOUR_ACCOUNT_ID>:oidc-provider/token.actions.githubusercontent.com"
       },
-      {
-        "Effect": "Allow",
-        "Action": [
-          "cloudfront:CreateInvalidation",
-          "cloudfront:GetDistribution",
-          "cloudfront:ListDistributions"
-        ],
-        "Resource": "*"
-      },
-      {
-        "Effect": "Allow",
-        "Action": [
-          "s3:ListAllMyBuckets"
-        ],
-        "Resource": "*"
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:VanSteve/portfolio:*"
+        }
       }
-    ]
-  }
-  ```
+    }
+  ]
+}
+```
 
-#### `AWS_SECRET_ACCESS_KEY`
-- **Description**: AWS secret access key corresponding to the access key ID
-- **Scope**: Repository secret
-- **Used by**: 
+> Replace `<YOUR_ACCOUNT_ID>` with your 12-digit AWS account ID.
+>
+> The `sub` condition restricts this role to only be assumable by workflows running in the `VanSteve/portfolio` repo. You can further restrict to specific branches or environments (e.g., `repo:VanSteve/portfolio:ref:refs/heads/main`).
+
+### Step 3: Permissions Policy
+
+Attach this policy to the role (same permissions previously used by the IAM user):
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket",
+        "s3:GetBucketLocation",
+        "s3:CreateBucket",
+        "s3:PutBucketLifecycleConfiguration"
+      ],
+      "Resource": [
+        "arn:aws:s3:::portfolio-*",
+        "arn:aws:s3:::portfolio-*/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:CreateInvalidation",
+        "cloudfront:GetDistribution",
+        "cloudfront:ListDistributions"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListAllMyBuckets"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+## Required GitHub Secret
+
+Only **one** repository secret is needed for AWS authentication:
+
+### `AWS_ROLE_ARN`
+- **Description**: ARN of the IAM role GitHub Actions assumes via OIDC
+- **Format**: `arn:aws:iam::<ACCOUNT_ID>:role/GitHubActionsDeployRole`
+- **Used by**:
   - `deploy-staging.yml`
   - `deploy-prod.yml`
-- **How to obtain**: Generated together with `AWS_ACCESS_KEY_ID`
 
-## 📝 Optional Secrets
+#### Setting the secret
+
+**Via GitHub Web Interface:**
+1. Navigate to your repository on GitHub
+2. Go to **Settings** > **Secrets and variables** > **Actions**
+3. Click **New repository secret**
+4. Name: `AWS_ROLE_ARN`
+5. Value: the full ARN of your IAM role
+6. Click **Add secret**
+
+**Via GitHub CLI:**
+```bash
+gh secret set AWS_ROLE_ARN --body "arn:aws:iam::<ACCOUNT_ID>:role/GitHubActionsDeployRole"
+```
+
+## Optional Secrets
 
 ### Terraform Cloud Integration (Not Currently Used)
 
-Since Terraform Cloud handles infrastructure deployment via VCS integration, GitHub Actions doesn't need direct access to Terraform Cloud. Infrastructure changes are automatically deployed when Terraform files are merged to the `main` branch.
-
-If you need GitHub Actions to interact with Terraform Cloud in the future:
+Terraform Cloud handles infrastructure deployment via VCS integration. GitHub Actions does not need direct access to Terraform Cloud. If this changes in the future:
 
 #### `TERRAFORM_CLOUD_TOKEN`
-- **Description**: API token for Terraform Cloud integration  
-- **Scope**: Repository secret
+- **Description**: API token for Terraform Cloud integration
 - **How to obtain**:
   1. Log in to [Terraform Cloud](https://app.terraform.io/)
-  2. Go to User Settings → Tokens
+  2. Go to User Settings > Tokens
   3. Generate a new API token
-  4. Copy the token value
 
-## 🏗️ Setting Up GitHub Environments
+## GitHub Environments
 
-Before setting up secrets, you need to create the required environments in your GitHub repository:
+Create these environments in **Settings** > **Environments**:
 
-1. Go to your repository on GitHub
-2. Navigate to **Settings** → **Environments** 
-3. Create the following environments:
-   - `staging` (for staging deployments)
-   - `production` (for production deployments)
-4. Optionally add protection rules:
-   - **Production**: Require manual approval before deployment
-   - **Production**: Restrict to `main` branch only
+- **`staging`** -- for staging deployments
+- **`production`** -- for production deployments
+  - Recommended: require manual approval before deployment
+  - Recommended: restrict to `main` branch only
 
-## 🔧 Setting Up Secrets
+## How It Appears in Workflows
 
-### Via GitHub Web Interface
-
-1. Navigate to your repository on GitHub
-2. Go to **Settings** → **Secrets and variables** → **Actions**
-3. Click **New repository secret**
-4. Enter the secret name (exactly as shown above)
-5. Paste the secret value
-6. Click **Add secret**
-
-### Via GitHub CLI
-
-```bash
-# Set AWS credentials
-gh secret set AWS_ACCESS_KEY_ID --body "your-access-key-id"
-gh secret set AWS_SECRET_ACCESS_KEY --body "your-secret-access-key"
-
-# Terraform Cloud token (only if needed for future integrations)
-# gh secret set TERRAFORM_CLOUD_TOKEN --body "your-terraform-cloud-token"
-```
-
-## 🛡️ Security Best Practices
-
-### AWS IAM User Setup
-
-1. **Create dedicated IAM user**: Don't use root credentials
-2. **Principle of least privilege**: Only grant necessary permissions
-3. **Enable MFA**: For the IAM user if possible
-4. **Regular rotation**: Rotate access keys periodically
-5. **Monitor usage**: Set up CloudTrail to monitor API usage
-
-### Terraform Cloud Token
-
-1. **Team-specific tokens**: Use team tokens if working in a team
-2. **Scope limitation**: Limit token access to specific workspaces
-3. **Regular rotation**: Rotate tokens periodically
-4. **Monitor usage**: Check Terraform Cloud audit logs
-
-## 🧪 Testing Secret Configuration
-
-### Test AWS Credentials
-
-```bash
-# Test AWS CLI access (run locally with same credentials)
-aws s3 ls
-aws cloudfront list-distributions
-```
-
-### Test Terraform Cloud Token
-
-```bash
-# Test Terraform Cloud API access
-curl -H "Authorization: Bearer $TERRAFORM_CLOUD_TOKEN" \
-     https://app.terraform.io/api/v2/organizations/vansteve-portfolio
-```
-
-## 🚨 Troubleshooting
-
-### Common Issues
-
-#### AWS Permission Denied
-- **Symptom**: `AccessDenied` errors in deployment logs
-- **Solution**: Verify IAM user has all required permissions
-- **Check**: Ensure bucket names match the policy patterns
-
-#### Terraform Cloud Authentication Failed
-- **Symptom**: `401 Unauthorized` errors in infrastructure workflow
-- **Solution**: Verify token is valid and has organization access
-- **Check**: Ensure workspaces exist with correct names
-
-#### Workflow Not Triggered
-- **Symptom**: Workflows don't run or fail immediately
-- **Solution**: Check secret names match exactly (case-sensitive)
-- **Check**: Verify secrets are set at repository level, not environment level
-
-### Debug Commands
-
-Add these steps to workflows for debugging (remove after fixing):
+The deploy workflows use the OIDC flow via `aws-actions/configure-aws-credentials@v4`:
 
 ```yaml
-- name: Debug AWS Configuration
-  run: |
-    aws sts get-caller-identity
-    aws s3 ls
+permissions:
+  id-token: write    # Required for OIDC token request
+  contents: read
 
-- name: Debug Terraform Cloud
-  run: |
-    curl -H "Authorization: Bearer $TF_API_TOKEN" \
-         https://app.terraform.io/api/v2/organizations/vansteve-portfolio
+steps:
+  - name: Configure AWS credentials
+    uses: aws-actions/configure-aws-credentials@v4
+    with:
+      role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+      aws-region: us-west-2
 ```
 
-## 📋 Secret Checklist
+The `id-token: write` permission is required for the runner to request the OIDC token from GitHub. The action handles the STS `AssumeRoleWithWebIdentity` call automatically.
 
-Before pushing changes, ensure:
+## Troubleshooting
 
-- [ ] `AWS_ACCESS_KEY_ID` is set and valid
-- [ ] `AWS_SECRET_ACCESS_KEY` is set and valid
-- [ ] `TERRAFORM_CLOUD_TOKEN` is set (only if using GitHub Actions for Terraform)
-- [ ] AWS IAM user has required S3 and CloudFront permissions
-- [ ] Terraform Cloud token has access to organization and workspaces
-- [ ] All secret names match exactly (case-sensitive)
-- [ ] Secrets are set at repository level, not environment level
+### "Not authorized to perform sts:AssumeRoleWithWebIdentity"
+- **Cause**: The IAM role trust policy doesn't match the requesting repo/branch
+- **Fix**: Verify the `sub` condition in the trust policy matches `repo:VanSteve/portfolio:*`
+- **Check**: Ensure the OIDC provider thumbprint is up to date (AWS manages this automatically for `token.actions.githubusercontent.com`)
 
-## 🔄 Secret Rotation Schedule
+### "No credentials found" or "Could not assume role"
+- **Cause**: Missing `permissions: id-token: write` in the workflow job
+- **Fix**: Ensure the deploy job has the `permissions` block
 
-- **AWS Credentials**: Every 90 days
-- **Terraform Cloud Token**: Every 180 days (if used)
-- **Review access**: Monthly
+### "AccessDenied" on S3 or CloudFront operations
+- **Cause**: The IAM role's permissions policy doesn't cover the required actions
+- **Fix**: Verify the permissions policy attached to the role matches the one documented above
+- **Check**: Ensure S3 bucket names match the `portfolio-*` pattern in the policy
 
-## 📞 Support
+### Workflow not triggered
+- **Cause**: Secret name mismatch (case-sensitive)
+- **Fix**: Verify `AWS_ROLE_ARN` is set exactly as named at the repository level
 
-If you encounter issues with secret configuration:
+### Debug step
 
-1. Check this documentation first
-2. Verify AWS IAM permissions in AWS Console
-3. Verify Terraform Cloud access in Terraform Cloud UI
-4. Check GitHub Actions logs for specific error messages
-5. Test credentials locally using the debug commands above
+Add temporarily to a workflow to verify the assumed identity:
+
+```yaml
+- name: Debug AWS identity
+  run: aws sts get-caller-identity
+```
+
+The output should show the role ARN and a session name like `GitHubActions-...`.
+
+## Security Advantages over Access Keys
+
+| | Access Keys | OIDC Federation |
+|---|---|---|
+| Credential lifetime | Permanent until rotated | ~1 hour, auto-expires |
+| Rotation needed | Every 90 days | Never (no static credentials) |
+| Leak risk | Key in secret store could be exfiltrated | No key exists to leak |
+| Scope | IAM user can be used from anywhere | Scoped to specific repo via trust policy |
+| Auditability | CloudTrail shows IAM user | CloudTrail shows role + GitHub session |
+
+## Checklist
+
+- [ ] OIDC Identity Provider created in AWS IAM
+- [ ] IAM Role created with trust policy scoped to `VanSteve/portfolio`
+- [ ] Permissions policy attached to the role
+- [ ] `AWS_ROLE_ARN` secret set in GitHub repository
+- [ ] `staging` and `production` environments created in GitHub
+- [ ] Test deployment triggers successfully from a PR merge
