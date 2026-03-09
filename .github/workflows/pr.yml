@@ -75,38 +75,7 @@ jobs:
             echo "✅ No obvious secrets found in website files"
           fi
 
-  # Terraform validation
-  terraform-validation:
-    name: Terraform Validation
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: "~1.0"
-
-      - name: Terraform Format Check
-        run: |
-          echo "🔍 Checking Terraform formatting..."
-          terraform fmt -check -recursive terraform/
-          echo "✅ Terraform formatting is correct"
-
-      - name: Terraform Validation (All Environments)
-        run: |
-          echo "🔍 Validating all Terraform environments..."
-          
-          for env in dev staging prod; do
-            echo "Validating $env environment..."
-            cd terraform/environments/$env
-            terraform init -backend=false
-            terraform validate
-            cd ../../..
-            echo "✅ $env environment is valid"
-          done
+  # Terraform validation is handled by infrastructure.yml (triggers on terraform/** changes)
 
   # Accessibility testing
   accessibility-test:
@@ -190,7 +159,7 @@ jobs:
   pr-validation-summary:
     name: PR Validation Summary
     runs-on: ubuntu-latest
-    needs: [build, file-checks, security-scan, terraform-validation, accessibility-test, performance-test]
+    needs: [build, file-checks, security-scan, accessibility-test, performance-test]
     if: always()
     
     steps:
@@ -220,12 +189,6 @@ jobs:
             echo "❌ **Security Scan**: Failed" >> $GITHUB_STEP_SUMMARY
           fi
           
-          if [ "${{ needs.terraform-validation.result }}" = "success" ]; then
-            echo "✅ **Terraform Validation**: Passed" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **Terraform Validation**: Failed" >> $GITHUB_STEP_SUMMARY
-          fi
-          
           if [ "${{ needs.accessibility-test.result }}" = "success" ]; then
             echo "✅ **Accessibility**: Passed" >> $GITHUB_STEP_SUMMARY
           else
@@ -244,7 +207,6 @@ jobs:
           if [ "${{ needs.build.result }}" = "success" ] && \
              [ "${{ needs.file-checks.result }}" = "success" ] && \
              [ "${{ needs.security-scan.result }}" = "success" ] && \
-             [ "${{ needs.terraform-validation.result }}" = "success" ] && \
              [ "${{ needs.accessibility-test.result }}" = "success" ] && \
              [ "${{ needs.performance-test.result }}" = "success" ]; then
             echo "### 🎉 All checks passed! This PR is ready for review." >> $GITHUB_STEP_SUMMARY
