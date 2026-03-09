@@ -5,9 +5,9 @@ variable "aws_region" {
   description = "AWS region for resource deployment"
   type        = string
   default     = "us-west-2"
-  
+
   validation {
-    condition = can(regex("^(us|eu|ap|sa|ca|me|af)-[a-z]+-[0-9]{1,2}$", var.aws_region))
+    condition     = can(regex("^(us|eu|ap|sa|ca|me|af)-[a-z]+-[0-9]{1,2}$", var.aws_region))
     error_message = "AWS region must be in the format: us-west-2, eu-west-1, etc."
   }
 }
@@ -22,9 +22,9 @@ variable "website_bucket_name" {
   description = "Base name of the S3 bucket for website hosting"
   type        = string
   default     = "portfolio-dev"
-  
+
   validation {
-    condition = can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.website_bucket_name)) && length(var.website_bucket_name) >= 3 && length(var.website_bucket_name) <= 45
+    condition     = can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.website_bucket_name)) && length(var.website_bucket_name) >= 3 && length(var.website_bucket_name) <= 45
     error_message = "S3 bucket base name must be 3-45 characters, lowercase letters, numbers, and hyphens only."
   }
 }
@@ -33,9 +33,9 @@ variable "domain_name" {
   description = "Custom domain name for the website (optional)"
   type        = string
   default     = ""
-  
+
   validation {
-    condition = var.domain_name == "" || can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.domain_name))
+    condition     = var.domain_name == "" || can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.domain_name))
     error_message = "Domain name must be a valid FQDN or empty string."
   }
 }
@@ -73,14 +73,14 @@ variable "enable_s3_versioning" {
 variable "s3_lifecycle_rules" {
   description = "S3 bucket lifecycle configuration"
   type = object({
-    enabled                        = bool
-    noncurrent_version_expiration  = number
-    delete_markers_expiration      = bool
+    enabled                       = bool
+    noncurrent_version_expiration = number
+    delete_markers_expiration     = bool
   })
   default = {
-    enabled                        = true
-    noncurrent_version_expiration  = 30
-    delete_markers_expiration      = true
+    enabled                       = true
+    noncurrent_version_expiration = 30
+    delete_markers_expiration     = true
   }
 }
 
@@ -94,7 +94,7 @@ variable "cloudfront_price_class" {
   description = "Price class for the CloudFront distribution"
   type        = string
   default     = "PriceClass_100"
-  
+
   validation {
     condition     = contains(["PriceClass_All", "PriceClass_200", "PriceClass_100"], var.cloudfront_price_class)
     error_message = "Price class must be one of: PriceClass_All, PriceClass_200, PriceClass_100."
@@ -122,7 +122,7 @@ variable "route53_zone_id" {
 variable "tags" {
   description = "Additional tags for resources"
   type        = map(string)
-  default     = {
+  default = {
     Environment = "dev"
     Terraform   = "true"
   }

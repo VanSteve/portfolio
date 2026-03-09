@@ -35,14 +35,14 @@ resource "time_sleep" "wait_for_bucket_settings" {
     aws_s3_bucket_public_access_block.website,
     aws_s3_bucket_website_configuration.website
   ]
-  
+
   create_duration = "10s"
 }
 
 # S3 Bucket Policy for Public Read Access
 resource "aws_s3_bucket_policy" "website" {
   bucket = aws_s3_bucket.website.id
-  
+
   # Explicit dependency to ensure public access block is configured first
   depends_on = [
     aws_s3_bucket_public_access_block.website,
@@ -82,7 +82,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "website" {
     status = "Enabled"
 
     filter {
-      prefix = ""  # Apply to all objects
+      prefix = "" # Apply to all objects
     }
 
     noncurrent_version_expiration {

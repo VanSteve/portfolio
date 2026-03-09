@@ -1,0 +1,172 @@
+name: Build Website
+
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+    outputs:
+      artifact-id:
+        description: 'Build artifact ID for deployment'
+        value: ${{ jobs.build.outputs.artifact-id }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate HTML files
+        run: |
+          echo "🔍 Validating HTML files..."
+          
+          # Install HTML validator
+          sudo apt-get update
+          sudo apt-get install -y tidy
+          
+          HTML_FILES=$(find terraform/test-files -name "*.html" 2>/dev/null)
+          if [ -z "$HTML_FILES" ]; then
+            echo "No HTML files found"
+            exit 1
+          fi
+
+          FAILED=0
+          while IFS= read -r file; do
+            echo "Validating: $file"
+            tidy -q -e "$file"; TIDY_EXIT=$?
+            if [ "$TIDY_EXIT" -gt 1 ]; then
+              echo "❌ HTML validation failed for: $file"
+              FAILED=1
+            fi
+          done <<< "$HTML_FILES"
+
+          if [ "$FAILED" -eq 1 ]; then
+            exit 1
+          fi
+          
+          echo "✅ All HTML files are valid"
+
+      - name: Validate CSS files
+        run: |
+          CSS_FILES=$(find terraform/test-files -name "*.css" 2>/dev/null)
+          if [ -z "$CSS_FILES" ]; then
+            echo "No CSS files found — skipping CSS validation"
+            exit 0
+          fi
+
+          echo "🔍 Validating CSS files..."
+          npm install -g stylelint stylelint-config-standard
+          echo '{"extends":"stylelint-config-standard"}' > .stylelintrc.json
+
+          FAILED=0
+          while IFS= read -r file; do
+            echo "Validating: $file"
+            if ! npx stylelint "$file"; then
+              echo "❌ CSS validation failed for: $file"
+              FAILED=1
+            fi
+          done <<< "$CSS_FILES"
+
+          if [ "$FAILED" -eq 1 ]; then
+            exit 1
+          fi
+          echo "✅ All CSS files are valid"
+
+      - name: Validate JS files
+        run: |
+          JS_FILES=$(find terraform/test-files -name "*.js" 2>/dev/null)
+          if [ -z "$JS_FILES" ]; then
+            echo "No JS files found — skipping JS validation"
+            exit 0
+          fi
+
+          echo "🔍 Validating JS files..."
+          FAILED=0
+          while IFS= read -r file; do
+            echo "Validating: $file"
+            if ! node --check "$file"; then
+              echo "❌ JS syntax error in: $file"
+              FAILED=1
+            fi
+          done <<< "$JS_FILES"
+
+          if [ "$FAILED" -eq 1 ]; then
+            exit 1
+          fi
+          echo "✅ All JS files are valid"
+
+      - name: Build website
+        run: |
+          echo "🏗️ Building static website..."
+          
+          # Create dist directory
+          mkdir -p dist
+          
+          # Copy static files from terraform/test-files (current website source)
+          if [ -d "terraform/test-files" ]; then
+            cp -r terraform/test-files/* dist/
+            echo "✅ Copied files from terraform/test-files"
+          else
+            echo "❌ No terraform/test-files directory found"
+            exit 1
+          fi
+          
+          # Ensure we have an index.html
+          if [ ! -f "dist/index.html" ]; then
+            echo "❌ No index.html found in build output"
+            exit 1
+          fi
+          
+          echo "✅ Static website build completed"
+
+      - name: Test build output
+        run: |
+          echo "🧪 Testing build output..."
+          
+          # Check if critical files exist
+          if [ ! -f "dist/index.html" ]; then
+            echo "❌ Missing index.html"
+            exit 1
+          fi
+          
+          # Validate built HTML (tidy exits 1 for warnings, 2 for errors)
+          tidy -q -e dist/index.html || [ $? -eq 1 ]
+          
+          EXECUTABLE_FILES=$(find dist -type f -executable || true)
+          if [ -n "$EXECUTABLE_FILES" ]; then
+            echo "⚠️ Found executable files, fixing permissions..."
+            find dist -type f -exec chmod 644 {} \;
+          fi
+          
+          echo "✅ Build output is valid"
+
+      - name: Upload build artifacts
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-build-${{ github.sha }}
+          path: dist/
+          retention-days: 30
+          compression-level: 6
+
+      - name: Build summary
+        run: |
+          echo "## 🎉 Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Static website build completed successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source**: \`terraform/test-files/\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Artifact Name**: \`website-build-${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Size**: $(du -sh dist | cut -f1)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Files Built**: $(find dist -type f | wc -l)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📁 Build Contents" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          ls -la dist/ >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

@@ -1,5 +1,8 @@
 name: Security Scan
 
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
@@ -7,8 +10,57 @@ on:
     branches: [main]
 
 jobs:
-  security-scan:
+  secret-scan:
+    name: Secret Detection
     runs-on: ubuntu-latest
+
     steps:
-      - name: Placeholder
-        run: echo "TODO - Implement security scanning workflow" 
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [secret-scan, dependency-review]
+    if: always()
+
+    steps:
+      - name: Generate security summary
+        run: |
+          echo "## 🛡️ Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.secret-scan.result }}" = "success" ]; then
+            echo "✅ **Secret Detection**: No secrets found" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.secret-scan.result }}" = "skipped" ]; then
+            echo "⏭️ **Secret Detection**: Skipped" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Secret Detection**: Potential secrets detected — review required" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.dependency-review.result }}" = "success" ]; then
+            echo "✅ **Dependency Review**: No known vulnerabilities" >> $GITHUB_STEP_SUMMARY
+          elif [ "${{ needs.dependency-review.result }}" = "skipped" ]; then
+            echo "⏭️ **Dependency Review**: Skipped (only runs on PRs)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Dependency Review**: Issues found — review required" >> $GITHUB_STEP_SUMMARY
+          fi
