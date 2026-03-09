@@ -9,11 +9,13 @@ on:
     branches: [main]
     paths:
       - 'terraform/**'
+      - '!terraform/test-files/**'
       - '.github/workflows/infrastructure.yml'
   push:
     branches: [main]
     paths:
       - 'terraform/**'
+      - '!terraform/test-files/**'
 
 # Terraform Cloud handles actual deployment via VCS integration.
 # This workflow validates Terraform code on PRs and logs post-merge
