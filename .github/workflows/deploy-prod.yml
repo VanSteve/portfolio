@@ -73,8 +73,11 @@ jobs:
         run: |
           echo "📦 Creating backup of current production site..."
           
-          # Get production bucket name
-          BUCKET_NAME=$(aws s3api list-buckets --query "Buckets[?contains(Name, 'portfolio-prod')].Name" --output text)
+          # Match the Terraform naming convention: portfolio-prod-<region>
+          # Exclude backup and log buckets to avoid false matches.
+          BUCKET_NAME=$(aws s3api list-buckets \
+            --query "Buckets[?contains(Name, 'portfolio-prod') && !contains(Name, 'backup') && !contains(Name, 'logs')].Name" \
+            --output text | awk '{print $1}')
           
           if [ -z "$BUCKET_NAME" ]; then
             echo "⚠️ Could not find production bucket"
@@ -106,7 +109,7 @@ jobs:
             exit 1
           fi
           
-          # Deploy with production-optimized cache settings
+          # Deploy static assets with immutable long cache (exclude HTML/JSON/XML)
           echo "Deploying static assets with long cache..."
           aws s3 sync dist/ s3://$BUCKET_NAME/ \
             --delete \
@@ -115,11 +118,11 @@ jobs:
             --exclude "*.json" \
             --exclude "*.xml"
           
-          # Deploy HTML and other files with shorter cache
+          # Deploy HTML/JSON/XML with short revalidation cache
           echo "Deploying HTML files with short cache..."
           aws s3 sync dist/ s3://$BUCKET_NAME/ \
-            --delete \
             --cache-control "public, max-age=3600, must-revalidate" \
+            --exclude "*" \
             --include "*.html" \
             --include "*.json" \
             --include "*.xml"
@@ -204,23 +207,21 @@ jobs:
           BACKUP_BUCKET="${{ steps.backup.outputs.backup-bucket }}"
           
           if [ -n "$BACKUP_BUCKET" ]; then
-            # Set lifecycle policy on backup bucket to auto-delete after 30 days
-            cat > backup-lifecycle.json << EOF
+            cat > backup-lifecycle.json << 'LIFECYCLE'
           {
             "Rules": [
               {
                 "ID": "AutoDeleteBackup",
                 "Status": "Enabled",
-                "Expiration": {
-                  "Days": 30
-                }
+                "Filter": { "Prefix": "" },
+                "Expiration": { "Days": 30 }
               }
             ]
           }
-          EOF
+          LIFECYCLE
             
             aws s3api put-bucket-lifecycle-configuration \
-              --bucket $BACKUP_BUCKET \
+              --bucket "$BACKUP_BUCKET" \
               --lifecycle-configuration file://backup-lifecycle.json
               
             echo "✅ Backup retention policy set (30 days)"

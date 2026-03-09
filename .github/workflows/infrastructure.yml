@@ -6,9 +6,14 @@ on:
     paths:
       - 'terraform/**'
       - '.github/workflows/infrastructure.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'terraform/**'
 
-# Note: Terraform Cloud handles actual deployment via VCS integration
-# This workflow only validates Terraform code in PRs
+# Terraform Cloud handles actual deployment via VCS integration.
+# This workflow validates Terraform code on PRs and logs post-merge
+# validation results when infrastructure changes land on main.
 
 jobs:
   terraform-validation:
