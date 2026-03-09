@@ -160,6 +160,8 @@ style K padding:10px
 - **Terraform Cloud Account** for state management
 - **GitHub Account** with repository access
 - **Custom Domain Name** for production deployment (configured via IONOS at the time of writing)
+- **Terraform CLI** for infrastructure development
+- **Python 3** and **pip** for pre-commit hooks
 
 ### Local Development Setup
 
@@ -169,18 +171,25 @@ style K padding:10px
    cd portfolio
    ```
 
-2. **Install dependencies**
+2. **Install pre-commit hooks** (required for Terraform contributors)
+   ```bash
+   pip install pre-commit
+   pre-commit install
+   ```
+   This installs a git hook that automatically checks Terraform formatting before each commit. If formatting issues are found, the hook will fix them — just re-stage the corrected files and commit again.
+
+3. **Install dependencies**
    ```bash
    npm install
    ```
 
-3. **Set up environment variables**
+4. **Set up environment variables**
    ```bash
    cp .env.example .env.local
    # Edit .env.local with your configuration
    ```
 
-4. **Start development server**
+5. **Start development server**
    ```bash
    npm run dev
    ```
