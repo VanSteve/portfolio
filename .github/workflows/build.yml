@@ -33,14 +33,24 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y tidy
           
-          # Find and validate all HTML files
-          find terraform/test-files -name "*.html" 2>/dev/null | while read file; do
+          HTML_FILES=$(find terraform/test-files -name "*.html" 2>/dev/null)
+          if [ -z "$HTML_FILES" ]; then
+            echo "No HTML files found"
+            exit 1
+          fi
+
+          FAILED=0
+          while IFS= read -r file; do
             echo "Validating: $file"
             if ! tidy -q -e "$file"; then
               echo "❌ HTML validation failed for: $file"
-              exit 1
+              FAILED=1
             fi
-          done
+          done <<< "$HTML_FILES"
+
+          if [ "$FAILED" -eq 1 ]; then
+            exit 1
+          fi
           
           echo "✅ All HTML files are valid"
 
@@ -57,13 +67,13 @@ jobs:
           echo '{"extends":"stylelint-config-standard"}' > .stylelintrc.json
 
           FAILED=0
-          echo "$CSS_FILES" | while read file; do
+          while IFS= read -r file; do
             echo "Validating: $file"
             if ! npx stylelint "$file"; then
               echo "❌ CSS validation failed for: $file"
               FAILED=1
             fi
-          done
+          done <<< "$CSS_FILES"
 
           if [ "$FAILED" -eq 1 ]; then
             exit 1
@@ -80,13 +90,13 @@ jobs:
 
           echo "🔍 Validating JS files..."
           FAILED=0
-          echo "$JS_FILES" | while read file; do
+          while IFS= read -r file; do
             echo "Validating: $file"
             if ! node --check "$file"; then
               echo "❌ JS syntax error in: $file"
               FAILED=1
             fi
-          done
+          done <<< "$JS_FILES"
 
           if [ "$FAILED" -eq 1 ]; then
             exit 1
