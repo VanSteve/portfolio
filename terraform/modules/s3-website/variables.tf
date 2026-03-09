@@ -4,9 +4,9 @@
 variable "bucket_name" {
   description = "Name of the S3 bucket for website hosting"
   type        = string
-  
+
   validation {
-    condition = can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.bucket_name)) && length(var.bucket_name) >= 3 && length(var.bucket_name) <= 63
+    condition     = can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.bucket_name)) && length(var.bucket_name) >= 3 && length(var.bucket_name) <= 63
     error_message = "S3 bucket name must be 3-63 characters, lowercase letters, numbers, periods, and hyphens only."
   }
 }
@@ -32,14 +32,14 @@ variable "enable_versioning" {
 variable "lifecycle_rules" {
   description = "S3 bucket lifecycle configuration"
   type = object({
-    enabled                        = bool
-    noncurrent_version_expiration  = number
-    delete_markers_expiration      = bool
+    enabled                       = bool
+    noncurrent_version_expiration = number
+    delete_markers_expiration     = bool
   })
   default = {
-    enabled                        = true
-    noncurrent_version_expiration  = 30
-    delete_markers_expiration      = true
+    enabled                       = true
+    noncurrent_version_expiration = 30
+    delete_markers_expiration     = true
   }
 }
 

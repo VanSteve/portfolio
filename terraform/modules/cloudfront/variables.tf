@@ -20,9 +20,9 @@ variable "domain_name" {
   description = "Custom domain name for the CloudFront distribution (optional)"
   type        = string
   default     = ""
-  
+
   validation {
-    condition = var.domain_name == "" || can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.domain_name))
+    condition     = var.domain_name == "" || can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.domain_name))
     error_message = "Domain name must be a valid FQDN or empty string."
   }
 }
@@ -89,7 +89,7 @@ variable "price_class" {
   description = "Price class for the CloudFront distribution"
   type        = string
   default     = "PriceClass_100"
-  
+
   validation {
     condition     = contains(["PriceClass_All", "PriceClass_200", "PriceClass_100"], var.price_class)
     error_message = "Price class must be one of: PriceClass_All, PriceClass_200, PriceClass_100."

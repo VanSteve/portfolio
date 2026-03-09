@@ -4,14 +4,14 @@
 terraform {
   cloud {
     organization = "vansteve-portfolio"
-    
+
     workspaces {
       name = "portfolio-infrastructure-prod"
     }
   }
-  
+
   required_version = ">= 1.0"
-  
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
