@@ -30,6 +30,31 @@ provider "aws" {
   }
 }
 
+# WAF Web ACL Module
+# WAF for CloudFront must be in us-east-1 — we map the us_east_1 provider alias
+# to the module's default aws provider to satisfy this requirement.
+module "waf" {
+  count  = var.enable_waf ? 1 : 0
+  source = "../../modules/waf"
+
+  providers = {
+    aws = aws.us_east_1
+  }
+
+  name              = "portfolio-waf-${var.environment}"
+  rate_limit        = var.waf_rate_limit
+  enable_geo_block  = var.waf_enable_geo_block
+  blocked_countries = var.waf_blocked_countries
+
+  tags = merge(var.tags, {
+    Module = "waf"
+  })
+}
+
+locals {
+  waf_web_acl_arn = var.enable_waf ? module.waf[0].web_acl_arn : null
+}
+
 # S3 Website Hosting Module
 module "s3_website" {
   source = "../../modules/s3-website"
@@ -88,6 +113,8 @@ module "cloudfront" {
     restriction_type = "none"
     locations        = []
   }
+
+  web_acl_id = local.waf_web_acl_arn
 
   tags = merge(var.tags, {
     Module = "cloudfront"

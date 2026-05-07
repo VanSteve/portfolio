@@ -7,8 +7,17 @@ This directory contains the Terraform configuration for the portfolio website in
 The infrastructure provides:
 - **S3 Bucket**: Static website hosting with public read access
 - **CloudFront Distribution**: Global CDN with HTTPS redirect and caching
+- **WAF Web ACL**: Edge-level protection against web exploits and request flooding
 - **ACM Certificate**: SSL/TLS certificate for custom domains (optional)
 - **Route53**: DNS management for custom domains (optional)
+
+## 🧩 Modules
+
+| Module | Path | Description |
+|--------|------|-------------|
+| `s3-website` | `modules/s3-website/` | S3 static website hosting with versioning and lifecycle rules |
+| `cloudfront` | `modules/cloudfront/` | CloudFront distribution, ACM certificate, Route53 records |
+| `waf` | `modules/waf/` | WAFv2 Web ACL with managed rules and rate limiting for CloudFront |
 
 ## 🌍 Environment Management
 
@@ -89,6 +98,11 @@ terraform validate
 
 # Test CloudFront module
 cd terraform/modules/cloudfront
+terraform init -backend=false
+terraform validate
+
+# Test WAF module
+cd terraform/modules/waf
 terraform init -backend=false
 terraform validate
 ```

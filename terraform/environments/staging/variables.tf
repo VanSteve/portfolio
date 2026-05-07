@@ -119,6 +119,30 @@ variable "route53_zone_id" {
   default     = ""
 }
 
+variable "enable_waf" {
+  description = "Enable AWS WAF Web ACL for CloudFront protection"
+  type        = bool
+  default     = true
+}
+
+variable "waf_rate_limit" {
+  description = "Maximum requests per IP in a 5-minute window before WAF blocks the IP"
+  type        = number
+  default     = 2000
+}
+
+variable "waf_enable_geo_block" {
+  description = "Enable WAF geographic blocking"
+  type        = bool
+  default     = false
+}
+
+variable "waf_blocked_countries" {
+  description = "ISO 3166-1 alpha-2 country codes to block via WAF (only used when waf_enable_geo_block is true)"
+  type        = list(string)
+  default     = []
+}
+
 variable "tags" {
   description = "Additional tags for resources"
   type        = map(string)

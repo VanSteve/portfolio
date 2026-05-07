@@ -39,4 +39,14 @@ output "route53_zone_id" {
 output "route53_name_servers" {
   description = "Route53 name servers for domain configuration (if custom domain is used)"
   value       = module.cloudfront.route53_name_servers
-} 
+}
+
+output "waf_web_acl_arn" {
+  description = "ARN of the WAF Web ACL (null if WAF is disabled)"
+  value       = local.waf_web_acl_arn
+}
+
+output "waf_web_acl_name" {
+  description = "Name of the WAF Web ACL (null if WAF is disabled)"
+  value       = var.enable_waf ? module.waf[0].web_acl_name : null
+}
