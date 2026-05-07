@@ -126,6 +126,12 @@ variable "route53_zone_id" {
   default     = ""
 }
 
+variable "web_acl_id" {
+  description = "ARN of the WAFv2 Web ACL to associate with this CloudFront distribution. Must be a us-east-1 WAF Web ACL. Leave empty or pass null to disable WAF."
+  type        = string
+  default     = ""
+}
+
 variable "tags" {
   description = "Additional tags for resources"
   type        = map(string)

@@ -7,6 +7,7 @@ This directory contains the Terraform configuration for the **production environ
 This environment uses the following modules:
 - **S3 Website Module** (`../../modules/s3-website/`) - Static website hosting
 - **CloudFront Module** (`../../modules/cloudfront/`) - CDN, SSL certificates, and DNS
+- **WAF Module** (`../../modules/waf/`) - Web Application Firewall at the CloudFront edge
 
 ## 🚀 Deployment
 
@@ -72,6 +73,7 @@ terraform plan
 - `website_bucket_name`: Base name for S3 bucket (default: `portfolio-prod`)
 - `domain_name`: **Production custom domain** (e.g., `fitzs.io`) - **Required for production**
 - `aws_region`: AWS region for deployment (default: `us-west-2`)
+- WAF variables — see [`modules/waf/README.md`](../../modules/waf/README.md) for full reference. Prod default: `waf_rate_limit = 1000` (tighter than dev/staging)
 
 ### Production-Specific Settings
 - **S3 Versioning**: Enabled with 90-day retention for production data protection
@@ -79,6 +81,7 @@ terraform plan
 - **Price Class**: `PriceClass_All` for global performance
 - **SSL Certificate**: Automatic via ACM with DNS validation
 - **Route 53**: Hosted zone and DNS records automatically configured
+- **WAF Rate Limit**: `1000` req/5 min per IP (tighter than dev/staging)
 
 ## 📊 Outputs
 
@@ -89,6 +92,8 @@ After deployment:
 - `route53_name_servers`: **For domain registrar configuration**
 - `route53_zone_id`: Route 53 hosted zone ID
 - `certificate_arn`: SSL certificate ARN
+- `waf_web_acl_arn`: ARN of the deployed WAF Web ACL
+- `waf_web_acl_name`: Name of the deployed WAF Web ACL
 
 ## 🔒 Production Considerations
 

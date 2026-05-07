@@ -98,4 +98,14 @@ output "cloudfront_logs_bucket_name" {
 output "cloudfront_logs_bucket_arn" {
   description = "ARN of the CloudFront logs S3 bucket"
   value       = var.enable_cloudfront_logging ? "${module.s3_website.bucket_arn}-cloudfront-logs" : null
-} 
+}
+
+output "waf_web_acl_arn" {
+  description = "ARN of the WAF Web ACL (null if WAF is disabled)"
+  value       = local.waf_web_acl_arn
+}
+
+output "waf_web_acl_name" {
+  description = "Name of the WAF Web ACL (null if WAF is disabled)"
+  value       = var.enable_waf ? module.waf[0].web_acl_name : null
+}

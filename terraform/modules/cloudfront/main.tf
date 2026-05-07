@@ -83,6 +83,8 @@ resource "aws_cloudfront_distribution" "distribution" {
 
   price_class = var.price_class
 
+  web_acl_id = var.web_acl_id != "" ? var.web_acl_id : null
+
   restrictions {
     geo_restriction {
       restriction_type = var.geo_restriction.restriction_type
